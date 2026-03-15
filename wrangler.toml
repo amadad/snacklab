@@ -1,0 +1,11 @@
+name = "snacklab"
+compatibility_date = "2025-01-01"
+compatibility_flags = ["nodejs_compat"]
+
+[[kv_namespaces]]
+binding = "STORE_KV"
+id = "PLACEHOLDER_KV_ID"
+
+[[r2_buckets]]
+binding = "STORE_R2"
+bucket_name = "snacklab-uploads"

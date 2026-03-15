@@ -26,7 +26,7 @@ export type Order = {
 };
 
 async function getKV() {
-  const { env } = await getCloudflareContext();
+  const { env } = await getCloudflareContext({ async: true });
   return env.STORE_KV;
 }
 

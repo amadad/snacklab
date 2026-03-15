@@ -1,7 +1,10 @@
 name = "snacklab"
-pages_build_output_dir = ".open-next"
+main = ".open-next/worker.js"
 compatibility_date = "2025-01-01"
 compatibility_flags = ["nodejs_compat"]
+
+[assets]
+directory = ".open-next/assets"
 
 [[kv_namespaces]]
 binding = "STORE_KV"
@@ -10,3 +13,6 @@ id = "41c514b338d742ae9acb06c89fb3a3a6"
 [[r2_buckets]]
 binding = "STORE_R2"
 bucket_name = "snacklab-uploads"
+
+[vars]
+ADMIN_PASSWORD = "snacklab2024"

@@ -1,14 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCloudflareContext } from "@opennextjs/cloudflare";
 
-export const runtime = "edge";
-
 export async function POST(req: NextRequest) {
   const formData = await req.formData();
   const file = formData.get("file") as File | null;
   if (!file) return NextResponse.json({ error: "No file" }, { status: 400 });
 
-  const { env } = await getCloudflareContext();
+  const { env } = await getCloudflareContext({ async: true });
   const ext = file.name.split(".").pop() || "jpg";
   const key = `${Date.now().toString(36)}.${ext}`;
 

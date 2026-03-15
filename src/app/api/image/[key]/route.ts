@@ -1,14 +1,12 @@
 import { NextRequest } from "next/server";
 import { getCloudflareContext } from "@opennextjs/cloudflare";
 
-export const runtime = "edge";
-
 export async function GET(
   _req: NextRequest,
   { params }: { params: Promise<{ key: string }> }
 ) {
   const { key } = await params;
-  const { env } = await getCloudflareContext();
+  const { env } = await getCloudflareContext({ async: true });
   const object = await env.STORE_R2.get(key);
 
   if (!object) {

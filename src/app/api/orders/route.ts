@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getOrders, saveOrders, getProducts, saveProducts, genId, Order, OrderItem } from "@/lib/data";
 
-export const runtime = "edge";
-
 type CreateOrderBody = {
   name: string;
   email: string;

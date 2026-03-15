@@ -3,6 +3,7 @@ import { getCloudflareContext } from "@opennextjs/cloudflare";
 export type Product = {
   id: string;
   name: string;
+  cost: number;
   price: number;
   image: string;
   quantity: number;

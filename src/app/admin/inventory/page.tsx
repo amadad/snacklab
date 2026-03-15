@@ -6,6 +6,7 @@ import Link from "next/link";
 type Product = {
   id: string;
   name: string;
+  cost: number;
   price: number;
   image: string;
   quantity: number;
@@ -14,6 +15,7 @@ type Product = {
 
 const empty: Omit<Product, "id"> = {
   name: "",
+  cost: 0,
   price: 0,
   image: "",
   quantity: 0,
@@ -81,6 +83,7 @@ export default function InventoryPage() {
     setEditId(p.id);
     setForm({
       name: p.name,
+      cost: p.cost || 0,
       price: p.price,
       image: p.image,
       quantity: p.quantity,
@@ -117,7 +120,22 @@ export default function InventoryPage() {
               />
             </div>
             <div>
-              <label className="block text-sm font-semibold text-caramel mb-1">Price ($)</label>
+              <label className="block text-sm font-semibold text-caramel mb-1">Cost ($)</label>
+              <input
+                type="number"
+                required
+                min="0"
+                step="0.01"
+                value={form.cost || ""}
+                onChange={(e) => setForm((f) => ({ ...f, cost: parseFloat(e.target.value) || 0 }))}
+                className="w-full border-2 border-pink-light rounded-lg px-3 py-2 focus:border-pink-bold focus:outline-none"
+                placeholder="What you paid"
+              />
+            </div>
+          </div>
+          <div className="grid grid-cols-3 gap-4">
+            <div>
+              <label className="block text-sm font-semibold text-caramel mb-1">Sell Price ($)</label>
               <input
                 type="number"
                 required
@@ -126,10 +144,16 @@ export default function InventoryPage() {
                 value={form.price || ""}
                 onChange={(e) => setForm((f) => ({ ...f, price: parseFloat(e.target.value) || 0 }))}
                 className="w-full border-2 border-pink-light rounded-lg px-3 py-2 focus:border-pink-bold focus:outline-none"
+                placeholder="What you charge"
               />
             </div>
-          </div>
-          <div className="grid grid-cols-2 gap-4">
+            {form.cost > 0 && form.price > 0 && (
+              <div className="flex items-end pb-2">
+                <span className={`text-sm font-bold ${form.price > form.cost ? "text-mint-bold" : "text-pink-bold"}`}>
+                  Profit: ${(form.price - form.cost).toFixed(2)} ({Math.round(((form.price - form.cost) / form.cost) * 100)}%)
+                </span>
+              </div>
+            )}
             <div>
               <label className="block text-sm font-semibold text-caramel mb-1">Quantity</label>
               <input
@@ -209,7 +233,13 @@ export default function InventoryPage() {
                 <div className="flex-1">
                   <h3 className="font-bold text-chocolate">{p.name}</h3>
                   <p className="text-sm text-caramel">
-                    ${p.price.toFixed(2)} · {p.quantity} in stock
+                    Cost ${(p.cost || 0).toFixed(2)} → Sell ${p.price.toFixed(2)}
+                    {p.cost > 0 && (
+                      <span className="text-mint-bold font-semibold ml-1">
+                        (+${(p.price - p.cost).toFixed(2)} profit)
+                      </span>
+                    )}
+                    {" · "}{p.quantity} in stock
                   </p>
                 </div>
                 <button

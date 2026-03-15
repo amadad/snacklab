@@ -12,6 +12,7 @@ export async function POST(req: NextRequest) {
   const product: Product = {
     id: genId(),
     name: body.name ?? "",
+    cost: Number(body.cost || 0),
     price: Number(body.price),
     image: body.image || "",
     quantity: Number(body.quantity),
@@ -27,7 +28,7 @@ export async function PUT(req: NextRequest) {
   const products = await getProducts();
   const idx = products.findIndex((p) => p.id === body.id);
   if (idx === -1) return NextResponse.json({ error: "Not found" }, { status: 404 });
-  products[idx] = { ...products[idx], ...body, price: Number(body.price), quantity: Number(body.quantity) };
+  products[idx] = { ...products[idx], ...body, cost: Number(body.cost || 0), price: Number(body.price), quantity: Number(body.quantity) };
   await saveProducts(products);
   return NextResponse.json(products[idx]);
 }

@@ -251,8 +251,8 @@ export default function Storefront({ initialProducts }: { initialProducts: Produ
           )}
 
           <p className="text-center text-xs text-caramel/50 mt-8">
-            Snack Lab is a student-run store. All sales are final. Pay with cash at pickup. Questions?
-            Find us at lunch.
+            Snack Lab is a student-run store. All sales are final. Pay with cash when your order is
+            handed off. Questions? Find us at lunch.
           </p>
         </div>
       </main>

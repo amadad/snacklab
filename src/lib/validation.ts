@@ -1,4 +1,11 @@
 import type { Product } from "@/lib/data";
+import {
+  isFulfillmentMethod,
+  isValidTimeSlot,
+  needsLocationDetails,
+  needsTimeSlot,
+  type OrderFulfillment,
+} from "@/lib/fulfillment";
 
 export type ValidationResult<T> =
   | { ok: true; value: T }
@@ -9,6 +16,7 @@ export type OrderInput = {
   name: string;
   email: string;
   items: { productId: string; quantity: number }[];
+  fulfillment: OrderFulfillment;
 };
 export type ItemRequestInput = {
   name: string;
@@ -130,6 +138,28 @@ export function parseOrderInput(input: unknown): ValidationResult<OrderInput> {
     return { ok: false, error: "Please enter a valid email address." };
   }
 
+  if (!isRecord(input.fulfillment) || !isFulfillmentMethod(input.fulfillment.method)) {
+    return { ok: false, error: "Choose when and where you want to get your order." };
+  }
+
+  const timeSlot = cleanString(input.fulfillment.timeSlot ?? "", "Time slot", 40, false);
+  if (!timeSlot.ok) return timeSlot;
+
+  const locationDetails = cleanString(input.fulfillment.locationDetails ?? "", "Location details", 200, false);
+  if (!locationDetails.ok) return locationDetails;
+
+  if (needsTimeSlot(input.fulfillment.method) && !timeSlot.value) {
+    return { ok: false, error: "Please choose an after-school time slot." };
+  }
+
+  if (timeSlot.value && !isValidTimeSlot(input.fulfillment.method, timeSlot.value)) {
+    return { ok: false, error: "Choose a valid time slot." };
+  }
+
+  if (needsLocationDetails(input.fulfillment.method) && !locationDetails.value) {
+    return { ok: false, error: "Please add the address or drop-off details." };
+  }
+
   if (input.items.length === 0) {
     return { ok: false, error: "Your cart is empty." };
   }
@@ -155,6 +185,11 @@ export function parseOrderInput(input: unknown): ValidationResult<OrderInput> {
     value: {
       name: name.value,
       email: email.value.toLowerCase(),
+      fulfillment: {
+        method: input.fulfillment.method,
+        timeSlot: timeSlot.value,
+        locationDetails: locationDetails.value,
+      },
       items: Array.from(merged.entries()).map(([productId, quantity]) => ({ productId, quantity })),
     },
   };

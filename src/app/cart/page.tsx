@@ -5,20 +5,59 @@ import Image from "next/image";
 import Link from "next/link";
 import Navbar from "@/components/Navbar";
 import { useCart } from "@/components/CartProvider";
+import {
+  getFulfillmentDescription,
+  getFulfillmentFee,
+  getFulfillmentLabel,
+  getFulfillmentSummary,
+  getLocationDetailsLabel,
+  getLocationDetailsPlaceholder,
+  getTimeSlotOptions,
+  needsLocationDetails,
+  needsTimeSlot,
+  type FulfillmentMethod,
+} from "@/lib/fulfillment";
 
 type CheckoutIssue = {
   productId: string;
   reason: string;
 };
 
+type SubmittedOrder = {
+  name: string;
+  total: number;
+  fulfillment: {
+    method: FulfillmentMethod;
+    timeSlot?: string;
+    locationDetails?: string;
+  };
+};
+
 export default function CartPage() {
   const { items, removeItem, updateQuantity, clearCart, total } = useCart();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
+  const [fulfillmentMethod, setFulfillmentMethod] = useState<FulfillmentMethod>("during-school");
+  const [timeSlot, setTimeSlot] = useState("");
+  const [locationDetails, setLocationDetails] = useState("");
   const [submitted, setSubmitted] = useState(false);
+  const [submittedOrder, setSubmittedOrder] = useState<SubmittedOrder | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [issues, setIssues] = useState<CheckoutIssue[]>([]);
+
+  const fulfillmentNeedsTime = needsTimeSlot(fulfillmentMethod);
+  const fulfillmentNeedsLocation = needsLocationDetails(fulfillmentMethod);
+  const fulfillmentFee = getFulfillmentFee(fulfillmentMethod);
+  const orderTotal = total + fulfillmentFee;
+
+  function updateFulfillmentMethod(method: FulfillmentMethod) {
+    setFulfillmentMethod(method);
+    setTimeSlot("");
+    if (method !== "house-dropoff") {
+      setLocationDetails("");
+    }
+  }
 
   async function handleCheckout(e: React.FormEvent) {
     e.preventDefault();
@@ -35,6 +74,11 @@ export default function CartPage() {
         body: JSON.stringify({
           name,
           email,
+          fulfillment: {
+            method: fulfillmentMethod,
+            timeSlot,
+            locationDetails,
+          },
           items: items.map((i) => ({
             productId: i.productId,
             quantity: i.quantity,
@@ -53,6 +97,15 @@ export default function CartPage() {
         return;
       }
 
+      setSubmittedOrder({
+        name,
+        total: orderTotal,
+        fulfillment: {
+          method: fulfillmentMethod,
+          timeSlot,
+          locationDetails,
+        },
+      });
       clearCart();
       setSubmitted(true);
     } catch {
@@ -69,9 +122,13 @@ export default function CartPage() {
         <main className="max-w-lg mx-auto px-4 py-20 text-center">
           <div className="text-6xl mb-4">🎉</div>
           <h1 className="text-3xl font-bold text-pink-bold mb-4">Order Placed!</h1>
-          <p className="text-caramel mb-6">
-            Thanks, {name}! Your order has been submitted. Pay with cash when you pick up.
+          <p className="text-caramel mb-2">
+            Thanks, {submittedOrder?.name ?? name}! Your order has been submitted. Pay with cash when you get it.
           </p>
+          <p className="text-sm text-caramel/80 mb-2">
+            {getFulfillmentSummary(submittedOrder?.fulfillment)}
+          </p>
+          <p className="text-sm text-caramel/80 mb-6">Total due: ${(submittedOrder?.total ?? orderTotal).toFixed(2)}</p>
           <Link
             href="/"
             className="inline-block bg-pink-bold text-white px-6 py-3 rounded-full font-semibold hover:bg-pink-mid transition-colors"
@@ -150,12 +207,26 @@ export default function CartPage() {
               ))}
             </div>
 
-            <div className="bg-white rounded-xl p-6 border-2 border-pink-light mb-6">
-              <div className="flex justify-between text-xl font-bold text-chocolate">
-                <span>Total</span>
-                <span className="text-pink-bold">${total.toFixed(2)}</span>
+            <div className="bg-white rounded-xl p-6 border-2 border-pink-light mb-6 space-y-2">
+              <div className="flex justify-between text-sm text-caramel">
+                <span>Subtotal</span>
+                <span>${total.toFixed(2)}</span>
               </div>
-              <p className="text-sm text-caramel mt-1">Pay with cash at pickup</p>
+              <div className="flex justify-between text-sm text-caramel">
+                <span>Fulfillment</span>
+                <span>{getFulfillmentLabel(fulfillmentMethod)}</span>
+              </div>
+              {fulfillmentFee > 0 && (
+                <div className="flex justify-between text-sm text-caramel">
+                  <span>Home drop-off fee</span>
+                  <span>${fulfillmentFee.toFixed(2)}</span>
+                </div>
+              )}
+              <div className="flex justify-between text-xl font-bold text-chocolate border-t border-pink-light pt-2">
+                <span>Total</span>
+                <span className="text-pink-bold">${orderTotal.toFixed(2)}</span>
+              </div>
+              <p className="text-sm text-caramel mt-1">Pay with cash when your order is handed off</p>
             </div>
 
             <form onSubmit={handleCheckout} className="bg-white rounded-xl p-6 border-2 border-pink-light space-y-4">
@@ -201,6 +272,69 @@ export default function CartPage() {
                   placeholder="email@example.com"
                 />
               </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-caramel mb-2">How should we get this to you?</label>
+                <div className="grid gap-2 sm:grid-cols-3">
+                  {(["during-school", "after-school", "house-dropoff"] as FulfillmentMethod[]).map((method) => (
+                    <label
+                      key={method}
+                      className={`rounded-xl border-2 px-4 py-3 cursor-pointer transition-colors ${
+                        fulfillmentMethod === method
+                          ? "border-pink-bold bg-pink-light/60"
+                          : "border-pink-light bg-white hover:border-pink-mid"
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name="fulfillment-method"
+                        value={method}
+                        checked={fulfillmentMethod === method}
+                        onChange={() => updateFulfillmentMethod(method)}
+                        className="sr-only"
+                      />
+                      <span className="block font-semibold text-chocolate">{getFulfillmentLabel(method)}</span>
+                      <span className="block text-xs text-caramel mt-1">{getFulfillmentDescription(method)}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              {fulfillmentNeedsTime && (
+                <div>
+                  <label className="block text-sm font-semibold text-caramel mb-1">After-school time slot</label>
+                  <select
+                    value={timeSlot}
+                    required={fulfillmentNeedsTime}
+                    onChange={(e) => setTimeSlot(e.target.value)}
+                    className="w-full border-2 border-pink-light rounded-lg px-3 py-2 focus:border-pink-bold focus:outline-none bg-white"
+                  >
+                    <option value="">Choose a time</option>
+                    {getTimeSlotOptions(fulfillmentMethod).map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              {fulfillmentNeedsLocation && (
+                <div>
+                  <label className="block text-sm font-semibold text-caramel mb-1">
+                    {getLocationDetailsLabel(fulfillmentMethod)}
+                  </label>
+                  <textarea
+                    value={locationDetails}
+                    required={fulfillmentNeedsLocation}
+                    onChange={(e) => setLocationDetails(e.target.value)}
+                    className="w-full border-2 border-pink-light rounded-lg px-3 py-2 focus:border-pink-bold focus:outline-none"
+                    rows={2}
+                    placeholder={getLocationDetailsPlaceholder(fulfillmentMethod)}
+                  />
+                </div>
+              )}
+
               <button
                 type="submit"
                 disabled={loading}

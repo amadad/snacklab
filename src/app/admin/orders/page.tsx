@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import AdminLogoutButton from "@/components/AdminLogoutButton";
+import { getFulfillmentSummary, type OrderFulfillment } from "@/lib/fulfillment";
 
 type OrderItem = {
   productId: string;
@@ -17,6 +18,8 @@ type Order = {
   name: string;
   email: string;
   items: OrderItem[];
+  fulfillment?: OrderFulfillment;
+  fulfillmentFee?: number;
   status: "pending" | "complete";
   date: string;
 };
@@ -244,7 +247,9 @@ export default function OrdersPage() {
         ) : (
           <div className="space-y-4">
             {[...filtered].reverse().map((order) => {
-              const orderTotal = order.items.reduce((sum, i) => sum + i.price * i.quantity, 0);
+              const itemsTotal = order.items.reduce((sum, i) => sum + i.price * i.quantity, 0);
+              const fulfillmentFee = order.fulfillmentFee ?? 0;
+              const orderTotal = itemsTotal + fulfillmentFee;
               return (
                 <div
                   key={order.id}
@@ -256,6 +261,7 @@ export default function OrdersPage() {
                     <div>
                       <h3 className="font-bold text-chocolate text-lg">{order.name}</h3>
                       <p className="text-sm text-caramel break-all">{order.email}</p>
+                      <p className="text-xs text-caramel mt-1">{getFulfillmentSummary(order.fulfillment)}</p>
                       <p className="text-xs text-caramel/60 mt-1">{new Date(order.date).toLocaleString()}</p>
                     </div>
                     <div className="flex flex-col gap-2 items-end shrink-0">
@@ -297,6 +303,12 @@ export default function OrdersPage() {
                         <span className="text-caramel">${(item.price * item.quantity).toFixed(2)}</span>
                       </div>
                     ))}
+                    {fulfillmentFee > 0 && (
+                      <div className="flex justify-between text-sm gap-4">
+                        <span className="text-chocolate">Home drop-off fee</span>
+                        <span className="text-caramel">${fulfillmentFee.toFixed(2)}</span>
+                      </div>
+                    )}
                   </div>
                   <div className="border-t border-pink-light mt-3 pt-2 flex justify-between font-bold">
                     <span className="text-chocolate">Total</span>

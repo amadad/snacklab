@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import AdminLogoutButton from "@/components/AdminLogoutButton";
+import { getFulfillmentSummary, type OrderFulfillment } from "@/lib/fulfillment";
 
 type OrderItem = {
   productId: string;
@@ -16,6 +17,8 @@ type Order = {
   id: string;
   name: string;
   items: OrderItem[];
+  fulfillment?: OrderFulfillment;
+  fulfillmentFee?: number;
   status: "pending" | "complete";
   date: string;
 };
@@ -96,7 +99,7 @@ export default function AdminPage() {
 
   const completedOrders = orders.filter((o) => o.status === "complete");
   const totalRevenue = completedOrders.reduce(
-    (sum, o) => sum + o.items.reduce((s, i) => s + i.price * i.quantity, 0),
+    (sum, o) => sum + o.items.reduce((s, i) => s + i.price * i.quantity, 0) + (o.fulfillmentFee ?? 0),
     0
   );
   const totalCost = completedOrders.reduce(
@@ -126,7 +129,7 @@ export default function AdminPage() {
   for (const o of completedOrders) {
     const key = new Date(o.date).toDateString();
     if (key in salesByDay) {
-      salesByDay[key] += o.items.reduce((s, i) => s + i.price * i.quantity, 0);
+      salesByDay[key] += o.items.reduce((s, i) => s + i.price * i.quantity, 0) + (o.fulfillmentFee ?? 0);
     }
   }
   const dayEntries = Object.entries(salesByDay);
@@ -259,15 +262,18 @@ export default function AdminPage() {
             <h2 className="font-bold text-chocolate mb-3">Recent Orders</h2>
             <div className="space-y-2">
               {recentOrders.map((o) => {
-                const total = o.items.reduce((s, i) => s + i.price * i.quantity, 0);
+                const total = o.items.reduce((s, i) => s + i.price * i.quantity, 0) + (o.fulfillmentFee ?? 0);
                 return (
                   <div
                     key={o.id}
                     className="flex justify-between items-center text-sm border-b border-pink-light/40 pb-2 last:border-0 last:pb-0"
                   >
                     <div>
-                      <span className="font-semibold text-chocolate">{o.name}</span>
-                      <span className="text-caramel ml-2 text-xs">{new Date(o.date).toLocaleDateString()}</span>
+                      <div>
+                        <span className="font-semibold text-chocolate">{o.name}</span>
+                        <span className="text-caramel ml-2 text-xs">{new Date(o.date).toLocaleDateString()}</span>
+                      </div>
+                      <p className="text-xs text-caramel mt-1">{getFulfillmentSummary(o.fulfillment)}</p>
                     </div>
                     <div className="flex items-center gap-2">
                       <span className="text-pink-bold font-bold">${total.toFixed(2)}</span>

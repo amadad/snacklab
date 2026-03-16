@@ -1,4 +1,5 @@
 import { getCloudflareContext } from "@opennextjs/cloudflare";
+import type { OrderFulfillment } from "@/lib/fulfillment";
 
 export type Product = {
   id: string;
@@ -24,6 +25,8 @@ export type Order = {
   name: string;
   email: string;
   items: OrderItem[];
+  fulfillment?: OrderFulfillment;
+  fulfillmentFee?: number;
   status: "pending" | "complete";
   date: string;
 };

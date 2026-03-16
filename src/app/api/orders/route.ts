@@ -13,6 +13,7 @@ import {
   type Product,
 } from "@/lib/data";
 import { requireAdminRequest } from "@/lib/auth";
+import { getFulfillmentFee } from "@/lib/fulfillment";
 import { parseDeleteOrderInput, parseOrderInput, parseOrderMutation } from "@/lib/validation";
 
 type ProductChange = {
@@ -103,6 +104,8 @@ export async function POST(req: NextRequest) {
     name: parsed.value.name,
     email: parsed.value.email,
     items: orderItems,
+    fulfillment: parsed.value.fulfillment,
+    fulfillmentFee: getFulfillmentFee(parsed.value.fulfillment.method),
     status: "pending",
     date: new Date().toISOString(),
   };

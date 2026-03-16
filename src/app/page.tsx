@@ -19,7 +19,7 @@ export default function StorePage() {
   const [showRequest, setShowRequest] = useState(false);
   const [requestForm, setRequestForm] = useState({ name: "", email: "", item: "", note: "" });
   const [requestSent, setRequestSent] = useState(false);
-  const { addItem } = useCart();
+  const { addItem, items } = useCart();
 
   useEffect(() => {
     fetch("/api/products")

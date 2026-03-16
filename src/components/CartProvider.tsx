@@ -8,6 +8,7 @@ export type CartItem = {
   price: number;
   image: string;
   quantity: number;
+  maxQuantity: number;
 };
 
 type CartCtx = {
@@ -29,8 +30,10 @@ export function CartProvider({ children }: { children: ReactNode }) {
     setItems((prev) => {
       const existing = prev.find((i) => i.productId === item.productId);
       if (existing) {
+        const next = existing.quantity + 1;
+        if (next > existing.maxQuantity) return prev; // already at stock limit
         return prev.map((i) =>
-          i.productId === item.productId ? { ...i, quantity: i.quantity + 1 } : i
+          i.productId === item.productId ? { ...i, quantity: next } : i
         );
       }
       return [...prev, { ...item, quantity: 1 }];
@@ -46,7 +49,11 @@ export function CartProvider({ children }: { children: ReactNode }) {
       setItems((prev) => prev.filter((i) => i.productId !== productId));
     } else {
       setItems((prev) =>
-        prev.map((i) => (i.productId === productId ? { ...i, quantity: qty } : i))
+        prev.map((i) =>
+          i.productId === productId
+            ? { ...i, quantity: Math.min(qty, i.maxQuantity) }
+            : i
+        )
       );
     }
   }, []);

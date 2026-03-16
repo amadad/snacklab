@@ -79,11 +79,22 @@ export default function StorePage() {
                           {lowStock ? `⚡ Only ${p.quantity} left!` : `${p.quantity} left`}
                         </span>
                       </div>
-                      <button
-                        onClick={() => addItem({ productId: p.id, name: p.name, price: p.price, image: p.image })}
-                        className="mt-3 w-full bg-pink-bold text-white py-2 rounded-full font-semibold hover:bg-pink-mid transition-colors active:scale-95">
-                        Add to Cart
-                      </button>
+                      {(() => {
+                        const inCart = items.find((i) => i.productId === p.id)?.quantity ?? 0;
+                        const atMax = inCart >= p.quantity;
+                        return (
+                          <button
+                            onClick={() => !atMax && addItem({ productId: p.id, name: p.name, price: p.price, image: p.image, maxQuantity: p.quantity })}
+                            disabled={atMax}
+                            className={`mt-3 w-full py-2 rounded-full font-semibold transition-colors active:scale-95 ${
+                              atMax
+                                ? "bg-caramel/30 text-caramel cursor-not-allowed"
+                                : "bg-pink-bold text-white hover:bg-pink-mid"
+                            }`}>
+                            {atMax ? `Max in cart (${inCart})` : "Add to Cart"}
+                          </button>
+                        );
+                      })()}
                     </div>
                   </div>
                 );

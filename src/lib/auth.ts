@@ -7,6 +7,7 @@ const ADMIN_SESSION_MAX_AGE = 60 * 60 * 12;
 
 type AdminSessionPayload = {
   exp: number;
+  seller?: string;
 };
 
 function encodeBase64Url(value: string) {
@@ -62,12 +63,32 @@ export async function getConfiguredAdminPassword() {
   return password ? password : null;
 }
 
-export async function createAdminSessionToken(secret: string) {
+export async function createAdminSessionToken(secret: string, seller?: string) {
   const payload = encodeBase64Url(
-    JSON.stringify({ exp: Date.now() + ADMIN_SESSION_MAX_AGE * 1000 } satisfies AdminSessionPayload)
+    JSON.stringify({ exp: Date.now() + ADMIN_SESSION_MAX_AGE * 1000, seller } satisfies AdminSessionPayload)
   );
   const signature = await signValue(secret, payload);
   return `${payload}.${signature}`;
+}
+
+export async function getSellerFromToken(token: string | undefined, secret: string): Promise<string | undefined> {
+  if (!token) return undefined;
+  const [payload] = token.split(".");
+  if (!payload) return undefined;
+  try {
+    const parsed = JSON.parse(decodeBase64Url(payload)) as Partial<AdminSessionPayload>;
+    return parsed.seller;
+  } catch {
+    return undefined;
+  }
+}
+
+export async function getConfiguredSellerCodes() {
+  const { env } = await getCloudflareContext({ async: true });
+  const raw = (env as Record<string, string | undefined>).SELLER_CODES?.trim();
+  if (!raw) return null;
+  // Format: "ZAIN,ALI,FRIEND1" — case-insensitive
+  return raw.split(",").map((s) => s.trim().toUpperCase()).filter(Boolean);
 }
 
 export async function verifyAdminSessionToken(token: string | undefined, secret: string) {

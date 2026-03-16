@@ -14,4 +14,6 @@ id = "41c514b338d742ae9acb06c89fb3a3a6"
 binding = "STORE_R2"
 bucket_name = "snacklab-uploads"
 
-# Set ADMIN_PASSWORD with `wrangler secret put ADMIN_PASSWORD`
+# Secrets (set via Cloudflare dashboard > Settings > Variables & Secrets):
+#   ADMIN_PASSWORD = snackattack2026
+#   SELLER_CODES   = ZAIN,SYRA,FRIEND1   (comma-separated, add/remove as needed)

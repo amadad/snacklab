@@ -29,6 +29,7 @@ export type Order = {
   fulfillmentFee?: number;
   status: "pending" | "complete";
   date: string;
+  seller?: string;
 };
 
 export type ItemRequest = {

@@ -12,7 +12,7 @@ import {
   type OrderItem,
   type Product,
 } from "@/lib/data";
-import { requireAdminRequest } from "@/lib/auth";
+import { requireAdminRequest, getSellerFromToken, getConfiguredAdminPassword, ADMIN_SESSION_COOKIE } from "@/lib/auth";
 import { getFulfillmentFee } from "@/lib/fulfillment";
 import { parseDeleteOrderInput, parseOrderInput, parseOrderMutation } from "@/lib/validation";
 
@@ -99,6 +99,11 @@ export async function POST(req: NextRequest) {
     );
   }
 
+  // Tag order with seller if session has one
+  const sessionToken = req.cookies.get(ADMIN_SESSION_COOKIE)?.value;
+  const adminPassword = await getConfiguredAdminPassword();
+  const seller = adminPassword ? await getSellerFromToken(sessionToken, adminPassword) : undefined;
+
   const order: Order = {
     id: genId(),
     name: parsed.value.name,
@@ -108,6 +113,7 @@ export async function POST(req: NextRequest) {
     fulfillmentFee: getFulfillmentFee(parsed.value.fulfillment.method),
     status: "pending",
     date: new Date().toISOString(),
+    seller,
   };
 
   const changeResult = await applyProductChanges(productChanges);

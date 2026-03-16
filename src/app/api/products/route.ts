@@ -40,5 +40,3 @@ export async function DELETE(req: NextRequest) {
   await saveProducts(products);
   return NextResponse.json({ ok: true });
 }
-{ ok: true });
-}

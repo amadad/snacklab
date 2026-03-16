@@ -17,6 +17,7 @@ export async function POST(req: NextRequest) {
     image: body.image || "",
     quantity: Number(body.quantity),
     description: body.description || "",
+    hot: body.hot ?? false,
   };
   products.push(product);
   await saveProducts(products);
@@ -38,4 +39,6 @@ export async function DELETE(req: NextRequest) {
   const products = (await getProducts()).filter((p) => p.id !== id);
   await saveProducts(products);
   return NextResponse.json({ ok: true });
+}
+{ ok: true });
 }

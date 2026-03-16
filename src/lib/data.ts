@@ -8,6 +8,7 @@ export type Product = {
   image: string;
   quantity: number;
   description: string;
+  hot?: boolean;
 };
 
 export type OrderItem = {

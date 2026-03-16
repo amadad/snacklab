@@ -1,7 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
+import AdminLogoutButton from "@/components/AdminLogoutButton";
 
 type Product = {
   id: string;
@@ -29,63 +31,115 @@ export default function InventoryPage() {
   const [form, setForm] = useState(empty);
   const [editId, setEditId] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const load = () =>
-    fetch("/api/products")
-      .then((r) => r.json() as Promise<Product[]>)
-      .then(setProducts);
+  async function load() {
+    const res = await fetch("/api/products");
+    if (!res.ok) {
+      throw new Error("Could not load inventory.");
+    }
 
-  useEffect(() => { load(); }, []);
+    setProducts((await res.json()) as Product[]);
+  }
+
+  useEffect(() => {
+    void load().catch((err) => {
+      setError(err instanceof Error ? err.message : "Could not load inventory.");
+    });
+  }, []);
 
   async function handleUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
+
     setUploading(true);
-    const fd = new FormData();
-    fd.append("file", file);
-    const res = await fetch("/api/upload", { method: "POST", body: fd });
-    const { url } = (await res.json()) as { url: string };
-    setForm((f) => ({ ...f, image: url }));
-    setUploading(false);
+    setError(null);
+
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      const res = await fetch("/api/upload", { method: "POST", body: fd });
+      const data = (await res.json().catch(() => null)) as { url?: string; error?: string } | null;
+
+      if (!res.ok || !data?.url) {
+        throw new Error(data?.error ?? "Could not upload image.");
+      }
+
+      setForm((f) => ({ ...f, image: data.url ?? "" }));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not upload image.");
+    } finally {
+      setUploading(false);
+      e.target.value = "";
+    }
   }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (editId) {
-      await fetch("/api/products", {
-        method: "PUT",
+    setSaving(true);
+    setError(null);
+
+    try {
+      const res = await fetch("/api/products", {
+        method: editId ? "PUT" : "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id: editId, ...form }),
+        body: JSON.stringify(editId ? { id: editId, ...form } : form),
       });
-    } else {
-      await fetch("/api/products", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
-      });
+      const data = (await res.json().catch(() => null)) as { error?: string } | null;
+
+      if (!res.ok) {
+        throw new Error(data?.error ?? "Could not save item.");
+      }
+
+      setForm(empty);
+      setEditId(null);
+      await load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not save item.");
+    } finally {
+      setSaving(false);
     }
-    setForm(empty);
-    setEditId(null);
-    load();
   }
 
   async function handleDelete(id: string) {
     if (!confirm("Delete this item?")) return;
-    await fetch("/api/products", {
+
+    setError(null);
+    const res = await fetch("/api/products", {
       method: "DELETE",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ id }),
     });
-    load();
+    const data = (await res.json().catch(() => null)) as { error?: string } | null;
+
+    if (!res.ok) {
+      setError(data?.error ?? "Could not delete item.");
+      return;
+    }
+
+    await load().catch((err) => {
+      setError(err instanceof Error ? err.message : "Could not load inventory.");
+    });
   }
 
   async function toggleHot(p: Product) {
-    await fetch("/api/products", {
+    setError(null);
+    const res = await fetch("/api/products", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ ...p, hot: !p.hot }),
     });
-    load();
+    const data = (await res.json().catch(() => null)) as { error?: string } | null;
+
+    if (!res.ok) {
+      setError(data?.error ?? "Could not update item.");
+      return;
+    }
+
+    await load().catch((err) => {
+      setError(err instanceof Error ? err.message : "Could not load inventory.");
+    });
   }
 
   function startEdit(p: Product) {
@@ -103,35 +157,62 @@ export default function InventoryPage() {
 
   return (
     <div className="min-h-screen bg-peach/30">
-      <nav className="bg-chocolate text-white px-6 py-3 flex items-center gap-4">
-        <Link href="/admin" className="text-pink-light hover:text-white transition-colors">← Back</Link>
-        <span className="text-xl font-bold">Inventory</span>
+      <nav className="bg-chocolate text-white px-6 py-3 flex items-center justify-between gap-4">
+        <div className="flex items-center gap-4">
+          <Link href="/admin" className="text-pink-light hover:text-white transition-colors">
+            ← Back
+          </Link>
+          <span className="text-xl font-bold">Inventory</span>
+        </div>
+        <AdminLogoutButton />
       </nav>
       <main className="max-w-3xl mx-auto px-4 py-8">
+        {error && (
+          <div className="bg-white rounded-xl p-4 border-2 border-pink-bold/30 text-pink-bold mb-6">
+            {error}
+          </div>
+        )}
+
         <form onSubmit={handleSubmit} className="bg-white rounded-xl p-6 border-2 border-pink-light mb-8 space-y-4">
           <h2 className="text-xl font-bold text-chocolate">{editId ? "Edit Item" : "Add New Item"}</h2>
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-semibold text-caramel mb-1">Name</label>
-              <input type="text" required value={form.name}
+              <input
+                type="text"
+                required
+                value={form.name}
                 onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-                className="w-full border-2 border-pink-light rounded-lg px-3 py-2 focus:border-pink-bold focus:outline-none" />
+                className="w-full border-2 border-pink-light rounded-lg px-3 py-2 focus:border-pink-bold focus:outline-none"
+              />
             </div>
             <div>
               <label className="block text-sm font-semibold text-caramel mb-1">Cost ($)</label>
-              <input type="number" required min="0" step="0.01" value={form.cost || ""}
+              <input
+                type="number"
+                required
+                min="0"
+                step="0.01"
+                value={form.cost || ""}
                 onChange={(e) => setForm((f) => ({ ...f, cost: parseFloat(e.target.value) || 0 }))}
                 className="w-full border-2 border-pink-light rounded-lg px-3 py-2 focus:border-pink-bold focus:outline-none"
-                placeholder="What you paid" />
+                placeholder="What you paid"
+              />
             </div>
           </div>
           <div className="grid grid-cols-3 gap-4">
             <div>
               <label className="block text-sm font-semibold text-caramel mb-1">Sell Price ($)</label>
-              <input type="number" required min="0" step="0.01" value={form.price || ""}
+              <input
+                type="number"
+                required
+                min="0"
+                step="0.01"
+                value={form.price || ""}
                 onChange={(e) => setForm((f) => ({ ...f, price: parseFloat(e.target.value) || 0 }))}
                 className="w-full border-2 border-pink-light rounded-lg px-3 py-2 focus:border-pink-bold focus:outline-none"
-                placeholder="What you charge" />
+                placeholder="What you charge"
+              />
             </div>
             {form.cost > 0 && form.price > 0 && (
               <div className="flex items-end pb-2">
@@ -142,9 +223,14 @@ export default function InventoryPage() {
             )}
             <div>
               <label className="block text-sm font-semibold text-caramel mb-1">Quantity</label>
-              <input type="number" required min="0" value={form.quantity || ""}
-                onChange={(e) => setForm((f) => ({ ...f, quantity: parseInt(e.target.value) || 0 }))}
-                className="w-full border-2 border-pink-light rounded-lg px-3 py-2 focus:border-pink-bold focus:outline-none" />
+              <input
+                type="number"
+                required
+                min="0"
+                value={form.quantity || ""}
+                onChange={(e) => setForm((f) => ({ ...f, quantity: parseInt(e.target.value, 10) || 0 }))}
+                className="w-full border-2 border-pink-light rounded-lg px-3 py-2 focus:border-pink-bold focus:outline-none"
+              />
             </div>
           </div>
           <div className="grid grid-cols-2 gap-4">
@@ -152,12 +238,25 @@ export default function InventoryPage() {
               <label className="block text-sm font-semibold text-caramel mb-1">Image</label>
               <input type="file" accept="image/*" onChange={handleUpload} className="w-full text-sm text-caramel" />
               {uploading && <p className="text-xs text-pink-bold mt-1">Uploading...</p>}
-              {form.image && <img src={form.image} alt="preview" className="mt-2 h-16 rounded-lg object-cover" />}
+              {form.image && (
+                <Image
+                  src={form.image}
+                  alt="preview"
+                  width={64}
+                  height={64}
+                  unoptimized
+                  className="mt-2 h-16 w-16 rounded-lg object-cover"
+                />
+              )}
             </div>
             <div className="flex items-center gap-3 pt-6">
-              <input type="checkbox" id="hot-flag" checked={form.hot ?? false}
+              <input
+                type="checkbox"
+                id="hot-flag"
+                checked={form.hot ?? false}
                 onChange={(e) => setForm((f) => ({ ...f, hot: e.target.checked }))}
-                className="w-5 h-5 accent-pink-bold cursor-pointer" />
+                className="w-5 h-5 accent-pink-bold cursor-pointer"
+              />
               <label htmlFor="hot-flag" className="font-semibold text-chocolate cursor-pointer">
                 🔥 Mark as Hot / Selling Fast
               </label>
@@ -165,19 +264,31 @@ export default function InventoryPage() {
           </div>
           <div>
             <label className="block text-sm font-semibold text-caramel mb-1">Description</label>
-            <textarea value={form.description}
+            <textarea
+              value={form.description}
               onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
               className="w-full border-2 border-pink-light rounded-lg px-3 py-2 focus:border-pink-bold focus:outline-none"
-              rows={2} />
+              rows={2}
+            />
           </div>
           <div className="flex gap-2">
-            <button type="submit"
-              className="bg-pink-bold text-white px-6 py-2 rounded-full font-semibold hover:bg-pink-mid transition-colors">
-              {editId ? "Save Changes" : "Add Item"}
+            <button
+              type="submit"
+              disabled={saving || uploading}
+              className="bg-pink-bold text-white px-6 py-2 rounded-full font-semibold hover:bg-pink-mid transition-colors disabled:opacity-60"
+            >
+              {saving ? "Saving..." : editId ? "Save Changes" : "Add Item"}
             </button>
             {editId && (
-              <button type="button" onClick={() => { setEditId(null); setForm(empty); }}
-                className="text-caramel hover:text-chocolate transition-colors px-4">
+              <button
+                type="button"
+                onClick={() => {
+                  setEditId(null);
+                  setForm(empty);
+                  setError(null);
+                }}
+                className="text-caramel hover:text-chocolate transition-colors px-4"
+              >
                 Cancel
               </button>
             )}
@@ -192,7 +303,14 @@ export default function InventoryPage() {
             {products.map((p) => (
               <div key={p.id} className="bg-white rounded-xl p-4 flex items-center gap-4 border-2 border-pink-light">
                 {p.image ? (
-                  <img src={p.image} alt={p.name} className="w-16 h-16 rounded-lg object-cover" />
+                  <Image
+                    src={p.image}
+                    alt={p.name}
+                    width={64}
+                    height={64}
+                    unoptimized
+                    className="w-16 h-16 rounded-lg object-cover"
+                  />
                 ) : (
                   <div className="w-16 h-16 rounded-lg bg-peach flex items-center justify-center text-2xl">🍡</div>
                 )}
@@ -207,23 +325,30 @@ export default function InventoryPage() {
                         (+${(p.price - p.cost).toFixed(2)} profit)
                       </span>
                     )}
-                    {" · "}{p.quantity} in stock
+                    {" · "}
+                    {p.quantity} in stock
                   </p>
                 </div>
-                <button onClick={() => toggleHot(p)}
+                <button
+                  onClick={() => toggleHot(p)}
                   className={`text-sm px-3 py-1 rounded-full font-semibold transition-colors border ${
                     p.hot
                       ? "bg-orange-100 text-orange-600 border-orange-300 hover:bg-orange-200"
                       : "bg-white text-caramel border-caramel/30 hover:bg-peach"
-                  }`}>
+                  }`}
+                >
                   {p.hot ? "🔥 Hot" : "Mark Hot"}
                 </button>
-                <button onClick={() => startEdit(p)}
-                  className="text-sm bg-pink-light text-pink-bold px-3 py-1 rounded-full font-semibold hover:bg-pink-mid hover:text-white transition-colors">
+                <button
+                  onClick={() => startEdit(p)}
+                  className="text-sm bg-pink-light text-pink-bold px-3 py-1 rounded-full font-semibold hover:bg-pink-mid hover:text-white transition-colors"
+                >
                   Edit
                 </button>
-                <button onClick={() => handleDelete(p.id)}
-                  className="text-sm text-caramel hover:text-pink-bold transition-colors">
+                <button
+                  onClick={() => handleDelete(p.id)}
+                  className="text-sm text-caramel hover:text-pink-bold transition-colors"
+                >
                   Delete
                 </button>
               </div>

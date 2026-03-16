@@ -1,9 +1,15 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
+import Link from "next/link";
 import Navbar from "@/components/Navbar";
 import { useCart } from "@/components/CartProvider";
-import Link from "next/link";
+
+type CheckoutIssue = {
+  productId: string;
+  reason: string;
+};
 
 export default function CartPage() {
   const { items, removeItem, updateQuantity, clearCart, total } = useCart();
@@ -11,30 +17,49 @@ export default function CartPage() {
   const [email, setEmail] = useState("");
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [issues, setIssues] = useState<CheckoutIssue[]>([]);
 
   async function handleCheckout(e: React.FormEvent) {
     e.preventDefault();
     if (items.length === 0) return;
+
     setLoading(true);
+    setError(null);
+    setIssues([]);
 
-    await fetch("/api/orders", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        name,
-        email,
-        items: items.map((i) => ({
-          productId: i.productId,
-          name: i.name,
-          price: i.price,
-          quantity: i.quantity,
-        })),
-      }),
-    });
+    try {
+      const res = await fetch("/api/orders", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name,
+          email,
+          items: items.map((i) => ({
+            productId: i.productId,
+            quantity: i.quantity,
+          })),
+        }),
+      });
 
-    clearCart();
-    setSubmitted(true);
-    setLoading(false);
+      const data = (await res.json().catch(() => null)) as
+        | { error?: string; issues?: CheckoutIssue[]; order?: { id: string } }
+        | null;
+
+      if (!res.ok) {
+        setError(data?.error ?? "Could not place your order. Please try again.");
+        setIssues(data?.issues ?? []);
+        setLoading(false);
+        return;
+      }
+
+      clearCart();
+      setSubmitted(true);
+    } catch {
+      setError("Could not place your order. Please try again.");
+    } finally {
+      setLoading(false);
+    }
   }
 
   if (submitted) {
@@ -83,9 +108,12 @@ export default function CartPage() {
                   className="bg-white rounded-xl p-4 flex items-center gap-4 border-2 border-pink-light"
                 >
                   {item.image ? (
-                    <img
+                    <Image
                       src={item.image}
                       alt={item.name}
+                      width={64}
+                      height={64}
+                      unoptimized
                       className="w-16 h-16 rounded-lg object-cover"
                     />
                   ) : (
@@ -95,9 +123,7 @@ export default function CartPage() {
                   )}
                   <div className="flex-1">
                     <h3 className="font-bold text-chocolate">{item.name}</h3>
-                    <p className="text-pink-bold font-semibold">
-                      ${item.price.toFixed(2)}
-                    </p>
+                    <p className="text-pink-bold font-semibold">${item.price.toFixed(2)}</p>
                   </div>
                   <div className="flex items-center gap-2">
                     <button
@@ -134,10 +160,27 @@ export default function CartPage() {
 
             <form onSubmit={handleCheckout} className="bg-white rounded-xl p-6 border-2 border-pink-light space-y-4">
               <h2 className="text-xl font-bold text-chocolate">Checkout</h2>
+
+              {error && (
+                <div className="rounded-xl border border-pink-bold/30 bg-peach/60 p-3 text-sm text-pink-bold space-y-2">
+                  <p>{error}</p>
+                  {issues.length > 0 && (
+                    <ul className="list-disc pl-5 space-y-1">
+                      {issues.map((issue) => {
+                        const productName = items.find((item) => item.productId === issue.productId)?.name;
+                        return (
+                          <li key={`${issue.productId}-${issue.reason}`}>
+                            {productName ?? "Item"}: {issue.reason}
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  )}
+                </div>
+              )}
+
               <div>
-                <label className="block text-sm font-semibold text-caramel mb-1">
-                  Your Name
-                </label>
+                <label className="block text-sm font-semibold text-caramel mb-1">Your Name</label>
                 <input
                   type="text"
                   required
@@ -148,9 +191,7 @@ export default function CartPage() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-semibold text-caramel mb-1">
-                  Email
-                </label>
+                <label className="block text-sm font-semibold text-caramel mb-1">Email</label>
                 <input
                   type="email"
                   required

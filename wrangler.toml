@@ -14,5 +14,4 @@ id = "41c514b338d742ae9acb06c89fb3a3a6"
 binding = "STORE_R2"
 bucket_name = "snacklab-uploads"
 
-[vars]
-ADMIN_PASSWORD = "snacklab2024"
+# Set ADMIN_PASSWORD with `wrangler secret put ADMIN_PASSWORD`

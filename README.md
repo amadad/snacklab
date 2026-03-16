@@ -1,46 +1,77 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Snack Lab
 
-## Getting Started
+> Diátaxis: how-to
 
-First, run the development server:
+Snack Lab is a small Next.js storefront deployed to Cloudflare Workers with OpenNext. It uses:
+
+- **KV** for products, orders, and item requests
+- **R2** for uploaded product images
+- **HTTP-only cookie auth** for the admin area
+
+## Local development
+
+Install dependencies:
+
+```bash
+npm clean-install
+```
+
+Create a local Cloudflare vars file for development:
+
+```bash
+cp .dev.vars.example .dev.vars
+```
+
+Then set your existing admin password in `.dev.vars`:
+
+```bash
+ADMIN_PASSWORD=your-existing-password
+```
+
+Start the app:
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Cloudflare deployment
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+In the Cloudflare dashboard, use these commands:
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- **Build command:** `npx opennextjs-cloudflare build`
+- **Deploy command:** `npx wrangler deploy`
+- **Non-production branch deploy command:** `npx wrangler versions upload`
 
-## Learn More
+Before deploying, store the admin password as a Wrangler secret:
 
-To learn more about Next.js, take a look at the following resources:
+```bash
+npx wrangler secret put ADMIN_PASSWORD
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Use the same password value you already use if you are not rotating it yet.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Required Cloudflare bindings
 
-## Deploy on Vercel
+`wrangler.toml` expects these bindings:
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+- `STORE_KV` → KV namespace
+- `STORE_R2` → R2 bucket
+- `ADMIN_PASSWORD` → Wrangler secret
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Useful commands
 
-## Features
+```bash
+npm run dev
+npm run build
+npm run preview
+npm run deploy
+npm run lint
+```
 
-- Product catalog with inventory tracking
-- Cart with stock-enforced quantity limits
+## What the app does
+
+- Public storefront with stock-aware cart limits
 - Cash-on-pickup checkout flow
-- Admin panel: orders, inventory, profit tracker, sales chart
-- Order reconciliation and cancellation
-- 🔥 Hot item badges, low stock warnings, sold-out display
-- Customer item request form
+- Admin inventory management
+- Admin order management and reconciliation
+- Customer item request submission

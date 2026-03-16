@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getProducts, saveProducts, genId, Product } from "@/lib/data";
+import { deleteProduct, genId, getProduct, getProducts, saveProduct, type Product } from "@/lib/data";
+import { requireAdminRequest } from "@/lib/auth";
+import { deleteManagedImageIfUnused } from "@/lib/images";
+import { parseId, parseProductInput } from "@/lib/validation";
 
 export async function GET() {
   const products = await getProducts();
@@ -7,36 +10,82 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
-  const body = (await req.json()) as Partial<Product>;
-  const products = await getProducts();
+  const unauthorized = await requireAdminRequest(req);
+  if (unauthorized) {
+    return unauthorized;
+  }
+
+  const parsed = parseProductInput(await req.json());
+  if (!parsed.ok) {
+    return NextResponse.json({ error: parsed.error }, { status: 400 });
+  }
+
   const product: Product = {
     id: genId(),
-    name: body.name ?? "",
-    cost: Number(body.cost || 0),
-    price: Number(body.price),
-    image: body.image || "",
-    quantity: Number(body.quantity),
-    description: body.description || "",
-    hot: body.hot ?? false,
+    ...parsed.value,
   };
-  products.push(product);
-  await saveProducts(products);
+
+  await saveProduct(product);
   return NextResponse.json(product, { status: 201 });
 }
 
 export async function PUT(req: NextRequest) {
-  const body = (await req.json()) as Partial<Product> & { id: string };
-  const products = await getProducts();
-  const idx = products.findIndex((p) => p.id === body.id);
-  if (idx === -1) return NextResponse.json({ error: "Not found" }, { status: 404 });
-  products[idx] = { ...products[idx], ...body, cost: Number(body.cost || 0), price: Number(body.price), quantity: Number(body.quantity) };
-  await saveProducts(products);
-  return NextResponse.json(products[idx]);
+  const unauthorized = await requireAdminRequest(req);
+  if (unauthorized) {
+    return unauthorized;
+  }
+
+  const body = (await req.json()) as Record<string, unknown>;
+  const id = parseId(body.id);
+  if (!id.ok) {
+    return NextResponse.json({ error: id.error }, { status: 400 });
+  }
+
+  const parsed = parseProductInput(body);
+  if (!parsed.ok) {
+    return NextResponse.json({ error: parsed.error }, { status: 400 });
+  }
+
+  const existing = await getProduct(id.value);
+  if (!existing) {
+    return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
+
+  const updated: Product = {
+    id: id.value,
+    ...parsed.value,
+  };
+
+  await saveProduct(updated);
+
+  if (existing.image && existing.image !== updated.image) {
+    void deleteManagedImageIfUnused(existing.image, updated.id).catch(() => undefined);
+  }
+
+  return NextResponse.json(updated);
 }
 
 export async function DELETE(req: NextRequest) {
-  const { id } = (await req.json()) as { id: string };
-  const products = (await getProducts()).filter((p) => p.id !== id);
-  await saveProducts(products);
+  const unauthorized = await requireAdminRequest(req);
+  if (unauthorized) {
+    return unauthorized;
+  }
+
+  const body = (await req.json()) as Record<string, unknown>;
+  const id = parseId(body.id);
+  if (!id.ok) {
+    return NextResponse.json({ error: id.error }, { status: 400 });
+  }
+
+  const existing = await getProduct(id.value);
+  if (!existing) {
+    return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
+
+  await deleteProduct(id.value);
+  if (existing.image) {
+    void deleteManagedImageIfUnused(existing.image, id.value).catch(() => undefined);
+  }
+
   return NextResponse.json({ ok: true });
 }

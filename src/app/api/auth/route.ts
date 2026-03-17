@@ -3,7 +3,7 @@ import {
   clearAdminSessionCookie,
   createAdminSessionToken,
   getConfiguredAdminPassword,
-  getConfiguredOwnerCode,
+  getConfiguredOwnerCodes,
   getConfiguredSellerCodes,
   getSessionInfo,
   isAdminAuthenticatedForRequest,
@@ -33,9 +33,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Wrong password." }, { status: 401 });
   }
 
-  // Check if this is the owner code
-  const ownerCode = await getConfiguredOwnerCode();
-  if (ownerCode && sellerInput === ownerCode) {
+  // Check if this is an owner code
+  const ownerCodes = await getConfiguredOwnerCodes();
+  if (ownerCodes && ownerCodes.includes(sellerInput)) {
     const token = await createAdminSessionToken(adminPassword, sellerInput, "owner");
     const response = NextResponse.json({ ok: true, seller: sellerInput, role: "owner" });
     setAdminSessionCookie(response, token);

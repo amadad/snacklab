@@ -99,10 +99,11 @@ export async function getConfiguredSellerCodes() {
   return raw.split(",").map((s) => s.trim().toUpperCase()).filter(Boolean);
 }
 
-export async function getConfiguredOwnerCode() {
+export async function getConfiguredOwnerCodes() {
   const { env } = await getCloudflareContext({ async: true });
-  const raw = (env as Record<string, string | undefined>).OWNER_CODE?.trim();
-  return raw ? raw.toUpperCase() : null;
+  const raw = (env as Record<string, string | undefined>).OWNER_CODES?.trim();
+  if (!raw) return null;
+  return raw.split(",").map((s) => s.trim().toUpperCase()).filter(Boolean);
 }
 
 export async function getConfiguredPlatformFee() {

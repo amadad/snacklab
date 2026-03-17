@@ -8,6 +8,7 @@ const ADMIN_SESSION_MAX_AGE = 60 * 60 * 12;
 type AdminSessionPayload = {
   exp: number;
   seller?: string;
+  role?: "owner" | "seller";
 };
 
 function encodeBase64Url(value: string) {
@@ -63,32 +64,52 @@ export async function getConfiguredAdminPassword() {
   return password ? password : null;
 }
 
-export async function createAdminSessionToken(secret: string, seller?: string) {
+export async function createAdminSessionToken(secret: string, seller?: string, role?: "owner" | "seller") {
   const payload = encodeBase64Url(
-    JSON.stringify({ exp: Date.now() + ADMIN_SESSION_MAX_AGE * 1000, seller } satisfies AdminSessionPayload)
+    JSON.stringify({ exp: Date.now() + ADMIN_SESSION_MAX_AGE * 1000, seller, role } satisfies AdminSessionPayload)
   );
   const signature = await signValue(secret, payload);
   return `${payload}.${signature}`;
 }
 
-export async function getSellerFromToken(token: string | undefined, secret: string): Promise<string | undefined> {
-  if (!token) return undefined;
+export function parseSessionPayload(token: string | undefined): Partial<AdminSessionPayload> {
+  if (!token) return {};
   const [payload] = token.split(".");
-  if (!payload) return undefined;
+  if (!payload) return {};
   try {
-    const parsed = JSON.parse(decodeBase64Url(payload)) as Partial<AdminSessionPayload>;
-    return parsed.seller;
+    return JSON.parse(decodeBase64Url(payload)) as Partial<AdminSessionPayload>;
   } catch {
-    return undefined;
+    return {};
   }
+}
+
+export async function getSellerFromToken(token: string | undefined, secret: string): Promise<string | undefined> {
+  return parseSessionPayload(token).seller;
+}
+
+export async function getSessionInfo(token: string | undefined): Promise<{ seller?: string; role?: "owner" | "seller" }> {
+  const p = parseSessionPayload(token);
+  return { seller: p.seller, role: p.role };
 }
 
 export async function getConfiguredSellerCodes() {
   const { env } = await getCloudflareContext({ async: true });
   const raw = (env as Record<string, string | undefined>).SELLER_CODES?.trim();
   if (!raw) return null;
-  // Format: "ZAIN,ALI,FRIEND1" — case-insensitive
   return raw.split(",").map((s) => s.trim().toUpperCase()).filter(Boolean);
+}
+
+export async function getConfiguredOwnerCode() {
+  const { env } = await getCloudflareContext({ async: true });
+  const raw = (env as Record<string, string | undefined>).OWNER_CODE?.trim();
+  return raw ? raw.toUpperCase() : null;
+}
+
+export async function getConfiguredPlatformFee() {
+  const { env } = await getCloudflareContext({ async: true });
+  const raw = (env as Record<string, string | undefined>).PLATFORM_FEE_PCT?.trim();
+  const pct = raw ? parseFloat(raw) : NaN;
+  return isNaN(pct) ? 20 : pct; // default 20%
 }
 
 export async function verifyAdminSessionToken(token: string | undefined, secret: string) {

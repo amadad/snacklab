@@ -3,14 +3,20 @@ import {
   clearAdminSessionCookie,
   createAdminSessionToken,
   getConfiguredAdminPassword,
+  getConfiguredOwnerCode,
   getConfiguredSellerCodes,
+  getSessionInfo,
   isAdminAuthenticatedForRequest,
   setAdminSessionCookie,
+  ADMIN_SESSION_COOKIE,
 } from "@/lib/auth";
 
 export async function GET(req: NextRequest) {
   const authenticated = await isAdminAuthenticatedForRequest(req);
-  return NextResponse.json({ authenticated });
+  if (!authenticated) return NextResponse.json({ authenticated: false });
+  const token = req.cookies.get(ADMIN_SESSION_COOKIE)?.value;
+  const { seller, role } = await getSessionInfo(token);
+  return NextResponse.json({ authenticated: true, seller, role });
 }
 
 export async function POST(req: NextRequest) {
@@ -24,10 +30,19 @@ export async function POST(req: NextRequest) {
   }
 
   if (password !== adminPassword) {
-    return NextResponse.json({ error: "Wrong password" }, { status: 401 });
+    return NextResponse.json({ error: "Wrong password." }, { status: 401 });
   }
 
-  // Validate seller code if SELLER_CODES is configured
+  // Check if this is the owner code
+  const ownerCode = await getConfiguredOwnerCode();
+  if (ownerCode && sellerInput === ownerCode) {
+    const token = await createAdminSessionToken(adminPassword, sellerInput, "owner");
+    const response = NextResponse.json({ ok: true, seller: sellerInput, role: "owner" });
+    setAdminSessionCookie(response, token);
+    return response;
+  }
+
+  // Validate seller code
   const sellerCodes = await getConfiguredSellerCodes();
   if (sellerCodes) {
     if (!sellerInput) {
@@ -39,8 +54,8 @@ export async function POST(req: NextRequest) {
   }
 
   const seller = sellerInput || undefined;
-  const token = await createAdminSessionToken(adminPassword, seller);
-  const response = NextResponse.json({ ok: true, seller });
+  const token = await createAdminSessionToken(adminPassword, seller, "seller");
+  const response = NextResponse.json({ ok: true, seller, role: "seller" });
   setAdminSessionCookie(response, token);
   return response;
 }

@@ -14,6 +14,12 @@ type Product = {
   quantity: number;
   description: string;
   hot?: boolean;
+  seller?: string;
+};
+
+type Session = {
+  seller?: string;
+  role?: "owner" | "seller";
 };
 
 const empty: Omit<Product, "id"> = {
@@ -27,20 +33,28 @@ const empty: Omit<Product, "id"> = {
 };
 
 export default function InventoryPage() {
-  const [products, setProducts] = useState<Product[]>([]);
+  const [allProducts, setAllProducts] = useState<Product[]>([]);
+  const [session, setSession] = useState<Session | null>(null);
   const [form, setForm] = useState(empty);
   const [editId, setEditId] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const isOwner = session?.role === "owner";
+  const mySeller = session?.seller;
+  const products = isOwner ? allProducts : allProducts.filter((p) => p.seller === mySeller);
+
   async function load() {
-    const res = await fetch("/api/products");
-    if (!res.ok) {
+    const [sessionRes, productsRes] = await Promise.all([
+      fetch("/api/session"),
+      fetch("/api/products"),
+    ]);
+    if (!sessionRes.ok || !productsRes.ok) {
       throw new Error("Could not load inventory.");
     }
-
-    setProducts((await res.json()) as Product[]);
+    setSession((await sessionRes.json()) as Session);
+    setAllProducts((await productsRes.json()) as Product[]);
   }
 
   useEffect(() => {
@@ -295,7 +309,9 @@ export default function InventoryPage() {
           </div>
         </form>
 
-        <h2 className="text-xl font-bold text-chocolate mb-4">Current Inventory ({products.length} items)</h2>
+        <h2 className="text-xl font-bold text-chocolate mb-4">
+          {isOwner ? `All Inventory (${products.length} items)` : `Your Inventory (${products.length} items)`}
+        </h2>
         {products.length === 0 ? (
           <p className="text-caramel">No products yet. Add one above!</p>
         ) : (

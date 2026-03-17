@@ -10,6 +10,7 @@ export type Product = {
   quantity: number;
   description: string;
   hot?: boolean;
+  seller?: string;
 };
 
 export type OrderItem = {

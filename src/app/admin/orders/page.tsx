@@ -22,23 +22,43 @@ type Order = {
   fulfillmentFee?: number;
   status: "pending" | "complete";
   date: string;
+  seller?: string;
+};
+
+type Session = {
+  seller?: string;
+  role?: "owner" | "seller";
 };
 
 export default function OrdersPage() {
-  const [orders, setOrders] = useState<Order[]>([]);
+  const [allOrders, setAllOrders] = useState<Order[]>([]);
+  const [allProducts, setAllProducts] = useState<{ id: string; seller?: string }[]>([]);
+  const [session, setSession] = useState<Session | null>(null);
   const [filter, setFilter] = useState<"all" | "pending" | "complete">("all");
   const [reconcileId, setReconcileId] = useState<string | null>(null);
   const [reconcileItems, setReconcileItems] = useState<Record<string, number>>({});
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
+  const isOwner = session?.role === "owner";
+  const mySeller = session?.seller;
+  const myProductIds = new Set(allProducts.filter((p) => isOwner || p.seller === mySeller).map((p) => p.id));
+  const orders = isOwner
+    ? allOrders
+    : allOrders.filter((o) => o.items.some((i) => myProductIds.has(i.productId)));
+
   async function load() {
-    const res = await fetch("/api/orders");
-    if (!res.ok) {
+    const [sessionRes, ordersRes, productsRes] = await Promise.all([
+      fetch("/api/session"),
+      fetch("/api/orders"),
+      fetch("/api/products"),
+    ]);
+    if (!sessionRes.ok || !ordersRes.ok || !productsRes.ok) {
       throw new Error("Could not load orders.");
     }
-
-    setOrders((await res.json()) as Order[]);
+    setSession((await sessionRes.json()) as Session);
+    setAllOrders((await ordersRes.json()) as Order[]);
+    setAllProducts((await productsRes.json()) as { id: string; seller?: string }[]);
   }
 
   useEffect(() => {

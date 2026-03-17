@@ -191,11 +191,6 @@ export default function AdminPage() {
             Platform fee: <strong>{platformFeePct}%</strong> of your revenue goes to the store.
           </p>
         )}
-        {isOwner && (
-          <p className="text-sm text-caramel mb-6">
-            Platform fee: <strong>{platformFeePct}%</strong> of each seller's revenue.
-          </p>
-        )}
 
         {error && (
           <div className="bg-white rounded-xl p-4 border-2 border-pink-bold/30 text-pink-bold mb-6">{error}</div>
@@ -228,7 +223,9 @@ export default function AdminPage() {
           <div className="bg-white rounded-xl p-5 border-2 border-pink-light mb-6">
             <div className="flex justify-between items-center mb-3">
               <h2 className="font-bold text-chocolate">Seller Breakdown</h2>
-              <span className="text-sm font-semibold text-mint-bold">Platform earnings: ${platformEarnings.toFixed(2)}</span>
+              {platformEarnings > 0 && (
+                <span className="text-sm font-semibold text-mint-bold">Your cut: ${platformEarnings.toFixed(2)}</span>
+              )}
             </div>
             <div className="space-y-3">
               {sellerRows.map(([code, v]) => {

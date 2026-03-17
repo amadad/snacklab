@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import Link from "next/link";
 import AdminLogoutButton from "@/components/AdminLogoutButton";
 import { getFulfillmentSummary, type OrderFulfillment } from "@/lib/fulfillment";
@@ -48,6 +48,38 @@ type Session = {
   role?: "owner" | "seller";
   platformFeePct?: number;
 };
+
+function Tooltip({ text }: { text: string }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handler(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  return (
+    <div ref={ref} className="relative inline-flex items-center">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="w-4 h-4 rounded-full bg-pink-light text-caramel text-[10px] font-bold flex items-center justify-center hover:bg-caramel hover:text-white transition-colors ml-1.5"
+        aria-label="More info"
+      >
+        ?
+      </button>
+      {open && (
+        <div className="absolute z-50 bottom-full left-1/2 -translate-x-1/2 mb-2 w-56 bg-chocolate text-white text-xs rounded-lg px-3 py-2 shadow-lg leading-relaxed">
+          {text}
+          <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-chocolate" />
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function AdminPage() {
   const [products, setProducts] = useState<Product[]>([]);
@@ -248,7 +280,10 @@ export default function AdminPage() {
         {/* Seller fee summary (seller) — money flow visual */}
         {!isOwner && completedOrders.length > 0 && (
           <div className="bg-white rounded-xl p-5 border-2 border-pink-light mb-6">
-            <h2 className="font-bold text-chocolate mb-4">Where your money goes</h2>
+            <div className="flex items-center mb-4">
+              <h2 className="font-bold text-chocolate">Where your money goes</h2>
+              <Tooltip text="Every dollar you earn gets split three ways: what you paid for the item (cost), the store's cut (platform fee), and what's left for you. Bigger green = more profit." />
+            </div>
             {totalRevenue > 0 ? (() => {
               const costPct = Math.round((totalCost / totalRevenue) * 100);
               const feePct = Math.round((platformFeeOwed / totalRevenue) * 100);
@@ -305,7 +340,10 @@ export default function AdminPage() {
         {/* Owner profit breakdown — margin visual */}
         {isOwner && completedOrders.length > 0 && (
           <div className="bg-white rounded-xl p-5 border-2 border-pink-light mb-6">
-            <h2 className="font-bold text-chocolate mb-4">Store Totals</h2>
+            <div className="flex items-center mb-4">
+              <h2 className="font-bold text-chocolate">Store Totals</h2>
+              <Tooltip text="Margin is what you keep after paying for inventory. 30%+ is healthy for a snack store. If margin is low, your costs are eating into profit — consider raising prices or lowering what you pay for stock." />
+            </div>
             {totalRevenue > 0 ? (() => {
               const costPct = Math.round((totalCost / totalRevenue) * 100);
               const profitPct = 100 - costPct;
@@ -406,7 +444,10 @@ export default function AdminPage() {
         {/* Inventory health */}
         {myProducts.length > 0 && (
           <div className="bg-white rounded-xl p-5 border-2 border-pink-light mb-6">
-            <h2 className="font-bold text-chocolate mb-1">Inventory Health</h2>
+            <div className="flex items-center mb-1">
+              <h2 className="font-bold text-chocolate">Inventory Health</h2>
+              <Tooltip text="Shows how much stock you have left for each item. Green = plenty, orange = running low (restock soon), red = sold out. Items are sorted worst-first so you spot problems fast." />
+            </div>
             <p className="text-xs text-caramel mb-4">Stock levels across your products</p>
             <div className="space-y-3">
               {[...myProducts].sort((a, b) => a.quantity - b.quantity).slice(0, 8).map((p) => {

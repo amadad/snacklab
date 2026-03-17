@@ -245,63 +245,115 @@ export default function AdminPage() {
           </div>
         )}
 
-        {/* Seller fee summary (seller) */}
+        {/* Seller fee summary (seller) — money flow visual */}
         {!isOwner && completedOrders.length > 0 && (
           <div className="bg-white rounded-xl p-5 border-2 border-pink-light mb-6">
-            <h2 className="font-bold text-chocolate mb-3">Your Breakdown</h2>
-            <div className="flex gap-6 text-sm flex-wrap">
-              <div>
-                <p className="text-caramel">Revenue</p>
-                <p className="text-xl font-bold text-chocolate">${totalRevenue.toFixed(2)}</p>
-              </div>
-              <div>
-                <p className="text-caramel">Your Cost</p>
-                <p className="text-xl font-bold text-pink-bold">-${totalCost.toFixed(2)}</p>
-              </div>
-              <div>
-                <p className="text-caramel">Platform Fee ({platformFeePct}%)</p>
-                <p className="text-xl font-bold text-pink-bold">-${platformFeeOwed.toFixed(2)}</p>
-              </div>
-              <div>
-                <p className="text-caramel">You Keep</p>
-                <p className={`text-xl font-bold ${netEarnings >= 0 ? "text-mint-bold" : "text-pink-bold"}`}>
-                  ${netEarnings.toFixed(2)}
-                  {totalRevenue > 0 && (
-                    <span className="text-sm font-normal text-caramel ml-1">
-                      ({Math.round((netEarnings / totalRevenue) * 100)}% of revenue)
-                    </span>
-                  )}
-                </p>
-              </div>
-            </div>
+            <h2 className="font-bold text-chocolate mb-4">Where your money goes</h2>
+            {totalRevenue > 0 ? (() => {
+              const costPct = Math.round((totalCost / totalRevenue) * 100);
+              const feePct = Math.round((platformFeeOwed / totalRevenue) * 100);
+              const keepPct = 100 - costPct - feePct;
+              return (
+                <>
+                  {/* Stacked bar */}
+                  <div className="flex rounded-lg overflow-hidden h-10 mb-3 text-xs font-bold">
+                    {costPct > 0 && (
+                      <div className="flex items-center justify-center bg-pink-bold text-white" style={{ width: `${costPct}%` }}>
+                        {costPct > 8 ? `${costPct}%` : ""}
+                      </div>
+                    )}
+                    {feePct > 0 && (
+                      <div className="flex items-center justify-center bg-caramel text-white" style={{ width: `${feePct}%` }}>
+                        {feePct > 8 ? `${feePct}%` : ""}
+                      </div>
+                    )}
+                    {keepPct > 0 && (
+                      <div className="flex items-center justify-center bg-mint-bold text-white" style={{ width: `${keepPct}%` }}>
+                        {keepPct > 8 ? `${keepPct}%` : ""}
+                      </div>
+                    )}
+                  </div>
+                  {/* Legend */}
+                  <div className="flex flex-wrap gap-4 text-sm mb-4">
+                    <div className="flex items-center gap-1.5">
+                      <div className="w-3 h-3 rounded-sm bg-pink-bold" />
+                      <span className="text-caramel">Your cost <strong className="text-chocolate">${totalCost.toFixed(2)}</strong></span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <div className="w-3 h-3 rounded-sm bg-caramel" />
+                      <span className="text-caramel">Store fee ({platformFeePct}%) <strong className="text-chocolate">${platformFeeOwed.toFixed(2)}</strong></span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <div className="w-3 h-3 rounded-sm bg-mint-bold" />
+                      <span className="text-caramel">You keep <strong className="text-chocolate">${netEarnings.toFixed(2)}</strong></span>
+                    </div>
+                  </div>
+                  <p className="text-xs text-caramel">
+                    Out of every <strong className="text-chocolate">$1.00</strong> you sell:&nbsp;
+                    <strong className="text-pink-bold">${(totalCost / totalRevenue).toFixed(2)}</strong> cost,&nbsp;
+                    <strong className="text-caramel">${(platformFeeOwed / totalRevenue).toFixed(2)}</strong> store fee,&nbsp;
+                    <strong className="text-mint-bold">${(netEarnings / totalRevenue).toFixed(2)}</strong> yours.
+                  </p>
+                </>
+              );
+            })() : (
+              <p className="text-sm text-caramel">No completed sales yet.</p>
+            )}
           </div>
         )}
 
-        {/* Owner profit breakdown */}
+        {/* Owner profit breakdown — margin visual */}
         {isOwner && completedOrders.length > 0 && (
           <div className="bg-white rounded-xl p-5 border-2 border-pink-light mb-6">
-            <h2 className="font-bold text-chocolate mb-3">Store Totals</h2>
-            <div className="flex gap-6 text-sm flex-wrap">
-              <div>
-                <p className="text-caramel">Total Revenue</p>
-                <p className="text-xl font-bold text-chocolate">${totalRevenue.toFixed(2)}</p>
-              </div>
-              <div>
-                <p className="text-caramel">Total Cost</p>
-                <p className="text-xl font-bold text-pink-bold">-${totalCost.toFixed(2)}</p>
-              </div>
-              <div>
-                <p className="text-caramel">Profit</p>
-                <p className={`text-xl font-bold ${totalProfit >= 0 ? "text-mint-bold" : "text-pink-bold"}`}>
-                  ${totalProfit.toFixed(2)}
-                  {totalRevenue > 0 && (
-                    <span className="text-sm font-normal text-caramel ml-1">
-                      ({Math.round((totalProfit / totalRevenue) * 100)}% margin)
-                    </span>
-                  )}
-                </p>
-              </div>
-            </div>
+            <h2 className="font-bold text-chocolate mb-4">Store Totals</h2>
+            {totalRevenue > 0 ? (() => {
+              const costPct = Math.round((totalCost / totalRevenue) * 100);
+              const profitPct = 100 - costPct;
+              // SVG donut
+              const r = 40;
+              const circ = 2 * Math.PI * r;
+              const profitDash = (profitPct / 100) * circ;
+              return (
+                <div className="flex items-center gap-8 flex-wrap">
+                  {/* Donut */}
+                  <div className="relative w-28 h-28 shrink-0">
+                    <svg viewBox="0 0 100 100" className="w-full h-full -rotate-90">
+                      <circle cx="50" cy="50" r={r} fill="none" stroke="#fce7e7" strokeWidth="14" />
+                      <circle
+                        cx="50" cy="50" r={r} fill="none"
+                        stroke={profitPct >= 0 ? "#34d399" : "#f87171"}
+                        strokeWidth="14"
+                        strokeDasharray={`${profitDash} ${circ}`}
+                        strokeLinecap="round"
+                      />
+                    </svg>
+                    <div className="absolute inset-0 flex flex-col items-center justify-center">
+                      <span className={`text-xl font-bold ${profitPct >= 0 ? "text-mint-bold" : "text-pink-bold"}`}>{profitPct}%</span>
+                      <span className="text-xs text-caramel">margin</span>
+                    </div>
+                  </div>
+                  {/* Numbers */}
+                  <div className="flex flex-col gap-3 text-sm">
+                    <div className="flex items-center gap-2">
+                      <div className="w-3 h-3 rounded-sm bg-pink-light" />
+                      <span className="text-caramel">Cost</span>
+                      <strong className="text-chocolate ml-auto pl-4">${totalCost.toFixed(2)}</strong>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="w-3 h-3 rounded-sm bg-mint-bold" />
+                      <span className="text-caramel">Profit</span>
+                      <strong className={`ml-auto pl-4 ${totalProfit >= 0 ? "text-mint-bold" : "text-pink-bold"}`}>${totalProfit.toFixed(2)}</strong>
+                    </div>
+                    <div className="flex items-center gap-2 pt-2 border-t border-pink-light/40">
+                      <span className="text-caramel font-semibold">Revenue</span>
+                      <strong className="text-chocolate ml-auto pl-4">${totalRevenue.toFixed(2)}</strong>
+                    </div>
+                  </div>
+                </div>
+              );
+            })() : (
+              <p className="text-sm text-caramel">No completed sales yet.</p>
+            )}
           </div>
         )}
 
@@ -347,6 +399,34 @@ export default function AdminPage() {
                   </div>
                 </div>
               ))}
+            </div>
+          </div>
+        )}
+
+        {/* Inventory health */}
+        {myProducts.length > 0 && (
+          <div className="bg-white rounded-xl p-5 border-2 border-pink-light mb-6">
+            <h2 className="font-bold text-chocolate mb-1">Inventory Health</h2>
+            <p className="text-xs text-caramel mb-4">Stock levels across your products</p>
+            <div className="space-y-3">
+              {[...myProducts].sort((a, b) => a.quantity - b.quantity).slice(0, 8).map((p) => {
+                const max = Math.max(...myProducts.map((x) => x.quantity), 1);
+                const pct = Math.round((p.quantity / max) * 100);
+                const color = p.quantity === 0 ? "bg-pink-bold" : p.quantity <= 2 ? "bg-caramel" : "bg-mint-bold";
+                const label = p.quantity === 0 ? "Sold out" : p.quantity <= 2 ? "Low" : "OK";
+                const labelColor = p.quantity === 0 ? "text-pink-bold" : p.quantity <= 2 ? "text-caramel" : "text-mint-bold";
+                return (
+                  <div key={p.id}>
+                    <div className="flex justify-between text-xs mb-1">
+                      <span className="font-semibold text-chocolate truncate max-w-[60%]">{p.name}</span>
+                      <span className={`font-bold ${labelColor}`}>{p.quantity} left · {label}</span>
+                    </div>
+                    <div className="w-full bg-pink-light rounded-full h-2">
+                      <div className={`${color} h-2 rounded-full transition-all`} style={{ width: `${Math.max(pct, p.quantity > 0 ? 3 : 0)}%` }} />
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
         )}

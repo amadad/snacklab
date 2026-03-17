@@ -94,14 +94,14 @@ export async function getSessionInfo(token: string | undefined): Promise<{ selle
 
 export async function getConfiguredSellerCodes() {
   const { env } = await getCloudflareContext({ async: true });
-  const raw = (env as Record<string, string | undefined>).SELLER_CODES?.trim();
+  const raw = (env as unknown as Record<string, string | undefined>).SELLER_CODES?.trim();
   if (!raw) return null;
   return raw.split(",").map((s) => s.trim().toUpperCase()).filter(Boolean);
 }
 
 export async function getConfiguredOwnerCodes() {
   const { env } = await getCloudflareContext({ async: true });
-  const raw = (env as Record<string, string | undefined>).OWNER_CODES?.trim();
+  const raw = (env as unknown as Record<string, string | undefined>).OWNER_CODES?.trim();
   if (!raw) return null;
   return raw.split(",").map((s) => s.trim().toUpperCase()).filter(Boolean);
 }

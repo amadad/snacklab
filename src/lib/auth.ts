@@ -108,7 +108,7 @@ export async function getConfiguredOwnerCodes() {
 
 export async function getConfiguredPlatformFee() {
   const { env } = await getCloudflareContext({ async: true });
-  const raw = (env as Record<string, string | undefined>).PLATFORM_FEE_PCT?.trim();
+  const raw = (env as unknown as Record<string, string | undefined>).PLATFORM_FEE_PCT?.trim();
   const pct = raw ? parseFloat(raw) : NaN;
   return isNaN(pct) ? 20 : pct; // default 20%
 }

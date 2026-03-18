@@ -113,6 +113,12 @@ export async function getConfiguredPlatformFee() {
   return isNaN(pct) ? 20 : pct; // default 20%
 }
 
+export async function getConfiguredDefaultSeller() {
+  const { env } = await getCloudflareContext({ async: true });
+  const raw = (env as unknown as Record<string, string | undefined>).DEFAULT_SELLER?.trim();
+  return raw ? raw.toUpperCase() : null;
+}
+
 export async function verifyAdminSessionToken(token: string | undefined, secret: string) {
   if (!token) {
     return false;

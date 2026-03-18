@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import {
+  getConfiguredDefaultSeller,
   getConfiguredPlatformFee,
   getSessionInfo,
   isAdminAuthenticatedForRequest,
@@ -13,6 +14,7 @@ export async function GET(req: NextRequest) {
   const token = req.cookies.get(ADMIN_SESSION_COOKIE)?.value;
   const { seller, role } = await getSessionInfo(token);
   const platformFeePct = await getConfiguredPlatformFee();
+  const defaultSeller = await getConfiguredDefaultSeller();
 
-  return NextResponse.json({ authenticated: true, seller, role, platformFeePct });
+  return NextResponse.json({ authenticated: true, seller, role, platformFeePct, defaultSeller });
 }

@@ -47,6 +47,7 @@ type Session = {
   seller?: string;
   role?: "owner" | "seller";
   platformFeePct?: number;
+  defaultSeller?: string;
 };
 
 function Tooltip({ text }: { text: string }) {
@@ -130,6 +131,7 @@ export default function AdminPage() {
   const isOwner = session?.role === "owner";
   const mySeller = session?.seller;
   const platformFeePct = session?.platformFeePct ?? 20;
+  const defaultSeller = session?.defaultSeller ?? null;
 
   // Filter data by role
   const myProducts = isOwner ? products : products.filter((p) => p.seller === mySeller);
@@ -177,10 +179,11 @@ export default function AdminPage() {
   const sellerBreakdown: Record<string, { revenue: number; cost: number; orders: number }> = {};
   if (isOwner) {
     for (const o of completedOrders) {
-      // Prefer o.seller, fall back to the seller of the first product in the order
+      // Prefer o.seller, fall back to product lookup, then DEFAULT_SELLER env, then "Store"
       const sellerCode =
         o.seller ||
         (o.items.length > 0 ? productSellerMap[o.items[0].productId] : null) ||
+        defaultSeller ||
         "Store";
       if (!sellerBreakdown[sellerCode]) sellerBreakdown[sellerCode] = { revenue: 0, cost: 0, orders: 0 };
       sellerBreakdown[sellerCode].revenue += o.items.reduce((s, i) => s + i.price * i.quantity, 0) + (o.fulfillmentFee ?? 0);

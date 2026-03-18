@@ -2,6 +2,9 @@
 
 All notable changes to Snacklab are documented here.
 
+## 2026-03-18
+- 🐛 Fix: resolve unknown seller in breakdown; feat: partial delivery flow with per-item progress (09:51 UTC, Ali Madad)
+
 ## 2026-03-17
 - 🔧 Chore: add CHANGELOG.md and pre-commit hook for auto-updates (12:15 UTC, Ali Madad)
 

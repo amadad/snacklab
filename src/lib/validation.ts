@@ -240,6 +240,55 @@ export function parseOrderMutation(
   return { ok: true, value: { id: id.value, status: input.status, items, delivered } };
 }
 
+export type OwnerPatchInput =
+  | { op: "reassign_seller"; id: string; seller: string; note?: string }
+  | { op: "void"; id: string; note?: string }
+  | { op: "unvoid"; id: string; note?: string }
+  | { op: "price_correction"; id: string; items: { productId: string; price: number }[]; note?: string };
+
+export function parseOwnerPatch(input: unknown): ValidationResult<OwnerPatchInput> {
+  if (typeof input !== "object" || input === null) {
+    return { ok: false, error: "Invalid patch payload." };
+  }
+  const r = input as Record<string, unknown>;
+  const id = parseId(r.id);
+  if (!id.ok) return id;
+
+  const note = typeof r.note === "string" ? r.note.trim().slice(0, 300) : undefined;
+
+  if (r.op === "reassign_seller") {
+    const seller = cleanString(r.seller, "Seller", 40);
+    if (!seller.ok) return seller;
+    return { ok: true, value: { op: "reassign_seller", id: id.value, seller: seller.value.toUpperCase(), note } };
+  }
+
+  if (r.op === "void") {
+    return { ok: true, value: { op: "void", id: id.value, note } };
+  }
+
+  if (r.op === "unvoid") {
+    return { ok: true, value: { op: "unvoid", id: id.value, note } };
+  }
+
+  if (r.op === "price_correction") {
+    if (!Array.isArray(r.items) || r.items.length === 0) {
+      return { ok: false, error: "price_correction requires at least one item." };
+    }
+    const items: { productId: string; price: number }[] = [];
+    for (const item of r.items) {
+      if (typeof item !== "object" || item === null) return { ok: false, error: "Invalid correction item." };
+      const productId = parseId((item as Record<string, unknown>).productId, "Product");
+      if (!productId.ok) return productId;
+      const price = cleanMoney((item as Record<string, unknown>).price, "Price");
+      if (!price.ok) return price;
+      items.push({ productId: productId.value, price: price.value });
+    }
+    return { ok: true, value: { op: "price_correction", id: id.value, items, note } };
+  }
+
+  return { ok: false, error: "Unknown op. Must be reassign_seller, void, unvoid, or price_correction." };
+}
+
 export function parseDeleteOrderInput(input: unknown): ValidationResult<{ id: string; restoreStock: boolean }> {
   if (!isRecord(input)) {
     return { ok: false, error: "Invalid order payload." };

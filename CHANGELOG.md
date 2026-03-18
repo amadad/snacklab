@@ -3,6 +3,8 @@
 All notable changes to Snacklab are documented here.
 
 ## 2026-03-18
+- 🐛 Fix: DEFAULT_SELLER env fallback for unattributed orders (09:54 UTC, Ali Madad)
+
 - 🐛 Fix: resolve unknown seller in breakdown; feat: partial delivery flow with per-item progress (09:51 UTC, Ali Madad)
 
 ## 2026-03-17

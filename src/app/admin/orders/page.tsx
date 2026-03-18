@@ -29,6 +29,18 @@ type Order = {
 type Session = {
   seller?: string;
   role?: "owner" | "seller";
+  defaultSeller?: string;
+};
+
+type AuditEntry = {
+  id: string;
+  orderId: string;
+  action: string;
+  actor: string;
+  date: string;
+  before: Record<string, unknown>;
+  after: Record<string, unknown>;
+  note?: string;
 };
 
 export default function OrdersPage() {
@@ -40,6 +52,17 @@ export default function OrdersPage() {
   const [reconcileItems, setReconcileItems] = useState<Record<string, number>>({});
   const [partialId, setPartialId] = useState<string | null>(null);
   const [partialDelivered, setPartialDelivered] = useState<Record<string, number>>({});
+  // Owner actions
+  const [reassignId, setReassignId] = useState<string | null>(null);
+  const [reassignSeller, setReassignSeller] = useState("");
+  const [reassignNote, setReassignNote] = useState("");
+  const [priceCorrId, setPriceCorrId] = useState<string | null>(null);
+  const [priceCorrItems, setPriceCorrItems] = useState<Record<string, string>>({});
+  const [priceCorrNote, setPriceCorrNote] = useState("");
+  // Audit drawer
+  const [auditOrderId, setAuditOrderId] = useState<string | null>(null);
+  const [auditEntries, setAuditEntries] = useState<AuditEntry[]>([]);
+  const [auditLoading, setAuditLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
@@ -198,6 +221,56 @@ export default function OrdersPage() {
     }
   }
 
+  async function ownerPatch(body: Record<string, unknown>) {
+    setSaving(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/orders/patch", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      const data = (await res.json().catch(() => null)) as { error?: string } | null;
+      if (!res.ok) throw new Error(data?.error ?? "Could not save.");
+      await load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not save.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function submitReassign() {
+    if (!reassignId || !reassignSeller.trim()) return;
+    await ownerPatch({ op: "reassign_seller", id: reassignId, seller: reassignSeller.trim(), note: reassignNote || undefined });
+    setReassignId(null);
+    setReassignSeller("");
+    setReassignNote("");
+  }
+
+  async function submitPriceCorr(order: Order) {
+    const items = order.items
+      .filter((i) => priceCorrItems[i.productId] !== undefined && priceCorrItems[i.productId] !== "")
+      .map((i) => ({ productId: i.productId, price: parseFloat(priceCorrItems[i.productId]) }))
+      .filter((i) => !isNaN(i.price));
+    if (items.length === 0) return;
+    await ownerPatch({ op: "price_correction", id: order.id, items, note: priceCorrNote || undefined });
+    setPriceCorrId(null);
+    setPriceCorrItems({});
+    setPriceCorrNote("");
+  }
+
+  async function openAudit(orderId: string) {
+    setAuditOrderId(orderId);
+    setAuditLoading(true);
+    setAuditEntries([]);
+    try {
+      const res = await fetch(`/api/audit?orderId=${orderId}`);
+      setAuditEntries((await res.json()) as AuditEntry[]);
+    } catch { /* ignore */ }
+    finally { setAuditLoading(false); }
+  }
+
   const filtered = filter === "all" ? orders : orders.filter((o) => o.status === filter);
   const pendingCount = orders.filter((o) => o.status === "pending" || o.status === "partial").length;
   const activeOrder = orders.find((o) => o.id === reconcileId);
@@ -343,6 +416,111 @@ export default function OrdersPage() {
         </div>
       )}
 
+      {/* Reassign seller modal */}
+      {reassignId && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl p-6 max-w-sm w-full border-2 border-pink-mid shadow-xl">
+            <h2 className="text-lg font-bold text-chocolate mb-1">Reassign Seller</h2>
+            <p className="text-sm text-caramel mb-4">Enter the seller code this order belongs to.</p>
+            <input
+              type="text"
+              placeholder="e.g. DOODAR"
+              value={reassignSeller}
+              onChange={(e) => setReassignSeller(e.target.value.toUpperCase())}
+              className="w-full border-2 border-pink-light rounded-lg px-3 py-2 font-bold uppercase mb-3 focus:border-pink-bold focus:outline-none"
+            />
+            <input
+              type="text"
+              placeholder="Note (optional)"
+              value={reassignNote}
+              onChange={(e) => setReassignNote(e.target.value)}
+              className="w-full border-2 border-pink-light rounded-lg px-3 py-2 text-sm mb-4 focus:border-pink-bold focus:outline-none"
+            />
+            <div className="flex gap-2">
+              <button onClick={() => void submitReassign()} disabled={saving || !reassignSeller.trim()} className="flex-1 bg-chocolate text-white py-2 rounded-full font-bold hover:bg-chocolate/80 transition-colors disabled:opacity-60">
+                {saving ? "Saving..." : "Save"}
+              </button>
+              <button onClick={() => setReassignId(null)} className="px-4 text-caramel hover:text-chocolate transition-colors">Cancel</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Price correction modal */}
+      {priceCorrId && (() => { const o = orders.find((x) => x.id === priceCorrId); if (!o) return null; return (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl p-6 max-w-md w-full border-2 border-caramel/40 shadow-xl">
+            <h2 className="text-lg font-bold text-chocolate mb-1">Price Correction</h2>
+            <p className="text-sm text-caramel mb-4">Override line item prices. Leave blank to keep original.</p>
+            <div className="space-y-3 mb-4">
+              {o.items.map((item) => (
+                <div key={item.productId} className="flex items-center justify-between gap-4">
+                  <div>
+                    <p className="font-semibold text-chocolate text-sm">{item.name}</p>
+                    <p className="text-xs text-caramel">Current: ${item.price.toFixed(2)}</p>
+                  </div>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    placeholder={item.price.toFixed(2)}
+                    value={priceCorrItems[item.productId] ?? ""}
+                    onChange={(e) => setPriceCorrItems((prev) => ({ ...prev, [item.productId]: e.target.value }))}
+                    className="w-24 border-2 border-pink-light rounded-lg px-2 py-1 text-center focus:border-caramel focus:outline-none"
+                  />
+                </div>
+              ))}
+            </div>
+            <input
+              type="text"
+              placeholder="Note (optional, e.g. 'agreed discount')"
+              value={priceCorrNote}
+              onChange={(e) => setPriceCorrNote(e.target.value)}
+              className="w-full border-2 border-pink-light rounded-lg px-3 py-2 text-sm mb-4 focus:border-caramel focus:outline-none"
+            />
+            <div className="flex gap-2">
+              <button onClick={() => void submitPriceCorr(o)} disabled={saving} className="flex-1 bg-chocolate text-white py-2 rounded-full font-bold hover:bg-chocolate/80 transition-colors disabled:opacity-60">
+                {saving ? "Saving..." : "Apply Correction"}
+              </button>
+              <button onClick={() => setPriceCorrId(null)} className="px-4 text-caramel hover:text-chocolate transition-colors">Cancel</button>
+            </div>
+          </div>
+        </div>
+      ); })()}
+
+      {/* Audit log drawer */}
+      {auditOrderId && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
+          <div className="bg-white rounded-t-2xl sm:rounded-2xl w-full sm:max-w-lg max-h-[70vh] flex flex-col border-2 border-caramel/30 shadow-xl">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-pink-light">
+              <h2 className="text-lg font-bold text-chocolate">Audit Log</h2>
+              <button onClick={() => setAuditOrderId(null)} className="text-caramel hover:text-chocolate text-xl font-bold">×</button>
+            </div>
+            <div className="overflow-y-auto flex-1 px-6 py-4">
+              {auditLoading && <p className="text-sm text-caramel">Loading...</p>}
+              {!auditLoading && auditEntries.length === 0 && <p className="text-sm text-caramel">No audit entries for this order yet.</p>}
+              <div className="space-y-3">
+                {[...auditEntries].reverse().map((entry) => (
+                  <div key={entry.id} className="text-sm border-l-2 border-caramel/30 pl-3">
+                    <div className="flex items-center gap-2 mb-0.5">
+                      <span className="font-bold text-chocolate">{entry.action.replace(/_/g, " ")}</span>
+                      <span className="text-xs text-caramel/60">by {entry.actor}</span>
+                      <span className="text-xs text-caramel/40 ml-auto">{new Date(entry.date).toLocaleString()}</span>
+                    </div>
+                    {entry.note && <p className="text-xs text-caramel italic mb-0.5">{entry.note}</p>}
+                    <div className="text-xs text-caramel/70 font-mono">
+                      <span className="line-through">{JSON.stringify(entry.before)}</span>
+                      {" → "}
+                      <span className="text-mint-bold">{JSON.stringify(entry.after)}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       <main className="max-w-3xl mx-auto px-4 py-8">
         {error && (
           <div className="bg-white rounded-xl p-4 border-2 border-pink-bold/30 text-pink-bold mb-6">
@@ -378,7 +556,11 @@ export default function OrdersPage() {
                 <div
                   key={order.id}
                   className={`bg-white rounded-xl p-5 border-2 ${
-                    order.status === "pending" ? "border-pink-mid" : "border-mint-bold/40"
+                    (order as Order & { voided?: boolean }).voided
+                      ? "border-caramel/20 opacity-60"
+                      : order.status === "pending"
+                      ? "border-pink-mid"
+                      : "border-mint-bold/40"
                   }`}
                 >
                   <div className="flex items-start justify-between mb-3 gap-4">
@@ -416,6 +598,37 @@ export default function OrdersPage() {
                           Reopen
                         </button>
                       )}
+                      {isOwner && (
+                        <>
+                          <button
+                            onClick={() => { setReassignId(order.id); setReassignSeller(order.seller ?? ""); setReassignNote(""); }}
+                            disabled={saving}
+                            className="px-3 py-1 rounded-full text-sm font-semibold text-caramel hover:text-white hover:bg-caramel transition-colors border border-caramel/30 disabled:opacity-60"
+                          >
+                            ✏️ Seller
+                          </button>
+                          <button
+                            onClick={() => { setPriceCorrId(order.id); setPriceCorrItems({}); setPriceCorrNote(""); }}
+                            disabled={saving}
+                            className="px-3 py-1 rounded-full text-sm font-semibold text-caramel hover:text-white hover:bg-caramel transition-colors border border-caramel/30 disabled:opacity-60"
+                          >
+                            💲 Price
+                          </button>
+                          <button
+                            onClick={() => void ownerPatch({ op: (order as Order & { voided?: boolean }).voided ? "unvoid" : "void", id: order.id })}
+                            disabled={saving}
+                            className={`px-3 py-1 rounded-full text-sm font-semibold transition-colors border disabled:opacity-60 ${(order as Order & { voided?: boolean }).voided ? "border-mint-bold text-mint-bold hover:bg-mint-bold hover:text-white" : "border-caramel/30 text-caramel hover:bg-caramel/20"}`}
+                          >
+                            {(order as Order & { voided?: boolean }).voided ? "Unvoid" : "Void"}
+                          </button>
+                          <button
+                            onClick={() => void openAudit(order.id)}
+                            className="px-3 py-1 rounded-full text-sm font-semibold text-caramel/60 hover:text-chocolate transition-colors border border-caramel/20"
+                          >
+                            🕵️ Log
+                          </button>
+                        </>
+                      )}
                       <button
                         onClick={() => cancelOrder(order)}
                         disabled={saving}
@@ -425,6 +638,18 @@ export default function OrdersPage() {
                       </button>
                     </div>
                   </div>
+                  {/* Voided badge */}
+                  {(order as Order & { voided?: boolean }).voided && (
+                    <div className="mb-2 text-xs font-bold text-caramel/60 bg-caramel/10 px-2 py-1 rounded-lg inline-block">
+                      ⚠️ Voided — excluded from stats
+                    </div>
+                  )}
+                  {/* Seller tag for owner */}
+                  {isOwner && order.seller && (
+                    <div className="mb-2 text-xs text-caramel bg-peach px-2 py-1 rounded-lg inline-block ml-1">
+                      {order.seller}
+                    </div>
+                  )}
                   {/* Status badge */}
                   {order.status === "partial" && (
                     <div className="mb-2 text-xs font-bold text-caramel bg-peach px-2 py-1 rounded-lg inline-block">

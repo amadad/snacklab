@@ -19,9 +19,10 @@ type Order = {
   items: OrderItem[];
   fulfillment?: OrderFulfillment;
   fulfillmentFee?: number;
-  status: "pending" | "complete";
+  status: "pending" | "partial" | "complete";
   date: string;
   seller?: string;
+  voided?: boolean;
 };
 
 type Product = {
@@ -144,7 +145,8 @@ export default function AdminPage() {
   const costMap: Record<string, number> = {};
   for (const p of products) costMap[p.id] = p.cost || 0;
 
-  const completedOrders = myOrders.filter((o) => o.status === "complete");
+  // voided orders are excluded from all stats/earnings
+  const completedOrders = myOrders.filter((o) => o.status === "complete" && !o.voided);
 
   const totalRevenue = completedOrders.reduce(
     (sum, o) => sum + o.items.reduce((s, i) => s + i.price * i.quantity, 0) + (o.fulfillmentFee ?? 0),

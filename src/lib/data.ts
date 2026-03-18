@@ -32,6 +32,7 @@ export type Order = {
   status: "pending" | "partial" | "complete";
   date: string;
   seller?: string;
+  voided?: boolean; // excluded from stats/earnings; record kept for audit
 };
 
 export type ItemRequest = {
@@ -43,9 +44,31 @@ export type ItemRequest = {
   date: string;
 };
 
+export type AuditAction =
+  | "reassign_seller"
+  | "void_order"
+  | "unvoid_order"
+  | "price_correction"
+  | "status_change"
+  | "reconcile"
+  | "partial_delivery"
+  | "cancel_order";
+
+export type AuditEntry = {
+  id: string;
+  orderId: string;
+  action: AuditAction;
+  actor: string; // seller code or "owner"
+  date: string;
+  before: Record<string, unknown>;
+  after: Record<string, unknown>;
+  note?: string;
+};
+
 const PRODUCT_PREFIX = "product:";
 const ORDER_PREFIX = "order:";
 const REQUEST_PREFIX = "request:";
+const AUDIT_PREFIX = "audit:";
 const MIGRATION_KEY = "data:migrated:v2";
 
 async function getKV() {
@@ -162,4 +185,22 @@ export async function saveItemRequest(request: ItemRequest) {
 
 export function genId(): string {
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+}
+
+// Audit log — append-only, keyed by timestamp+random so they list in order
+export async function writeAuditEntry(entry: Omit<AuditEntry, "id" | "date">): Promise<AuditEntry> {
+  const full: AuditEntry = {
+    ...entry,
+    id: genId(),
+    date: new Date().toISOString(),
+  };
+  // Key: audit:<orderId>:<timestamp> so per-order queries are fast
+  await putJson(`${AUDIT_PREFIX}${full.orderId}:${full.date}:${full.id}`, full);
+  return full;
+}
+
+export async function getAuditLog(orderId?: string): Promise<AuditEntry[]> {
+  const prefix = orderId ? `${AUDIT_PREFIX}${orderId}:` : AUDIT_PREFIX;
+  const entries = await listJsonByPrefix<AuditEntry>(prefix);
+  return entries.sort((a, b) => a.date.localeCompare(b.date));
 }

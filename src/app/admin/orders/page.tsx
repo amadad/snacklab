@@ -11,6 +11,7 @@ type OrderItem = {
   price: number;
   quantity: number;
   cost?: number;
+  delivered?: number;
 };
 
 type Order = {
@@ -20,7 +21,7 @@ type Order = {
   items: OrderItem[];
   fulfillment?: OrderFulfillment;
   fulfillmentFee?: number;
-  status: "pending" | "complete";
+  status: "pending" | "partial" | "complete";
   date: string;
   seller?: string;
 };
@@ -34,9 +35,11 @@ export default function OrdersPage() {
   const [allOrders, setAllOrders] = useState<Order[]>([]);
   const [allProducts, setAllProducts] = useState<{ id: string; seller?: string }[]>([]);
   const [session, setSession] = useState<Session | null>(null);
-  const [filter, setFilter] = useState<"all" | "pending" | "complete">("all");
+  const [filter, setFilter] = useState<"all" | "pending" | "partial" | "complete">("all");
   const [reconcileId, setReconcileId] = useState<string | null>(null);
   const [reconcileItems, setReconcileItems] = useState<Record<string, number>>({});
+  const [partialId, setPartialId] = useState<string | null>(null);
+  const [partialDelivered, setPartialDelivered] = useState<Record<string, number>>({});
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
@@ -162,9 +165,43 @@ export default function OrdersPage() {
     }
   }
 
+  function openPartial(order: Order) {
+    const defaults: Record<string, number> = {};
+    for (const item of order.items) {
+      defaults[item.productId] = item.delivered ?? 0;
+    }
+    setPartialDelivered(defaults);
+    setPartialId(order.id);
+  }
+
+  async function submitPartial(order: Order) {
+    setSaving(true);
+    setError(null);
+    try {
+      const delivered = order.items.map((item) => ({
+        productId: item.productId,
+        quantity: partialDelivered[item.productId] ?? (item.delivered ?? 0),
+      }));
+      const res = await fetch("/api/orders", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: order.id, status: "partial", delivered }),
+      });
+      const data = (await res.json().catch(() => null)) as { error?: string } | null;
+      if (!res.ok) throw new Error(data?.error ?? "Could not save delivery.");
+      setPartialId(null);
+      await load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not save delivery.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
   const filtered = filter === "all" ? orders : orders.filter((o) => o.status === filter);
-  const pendingCount = orders.filter((o) => o.status === "pending").length;
+  const pendingCount = orders.filter((o) => o.status === "pending" || o.status === "partial").length;
   const activeOrder = orders.find((o) => o.id === reconcileId);
+  const partialOrder = orders.find((o) => o.id === partialId);
 
   return (
     <div className="min-h-screen bg-peach/30">
@@ -239,6 +276,73 @@ export default function OrdersPage() {
         </div>
       )}
 
+      {partialId && partialOrder && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl p-6 max-w-md w-full border-2 border-caramel/40 shadow-xl">
+            <h2 className="text-xl font-bold text-chocolate mb-1">📦 Record Delivery</h2>
+            <p className="text-sm text-caramel mb-4">
+              How many did you deliver to <strong>{partialOrder.name}</strong> today? Set each item to what you actually handed off.
+            </p>
+            <div className="space-y-4 mb-6">
+              {partialOrder.items.map((item) => {
+                const alreadyDelivered = item.delivered ?? 0;
+                const remaining = item.quantity - alreadyDelivered;
+                return (
+                  <div key={item.productId}>
+                    <div className="flex items-center justify-between gap-4 mb-1">
+                      <div>
+                        <p className="font-semibold text-chocolate text-sm">{item.name}</p>
+                        <p className="text-xs text-caramel">
+                          Ordered: {item.quantity} · Already delivered: {alreadyDelivered} · Still owed: {remaining}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <label className="text-xs text-caramel font-semibold whitespace-nowrap">Delivering now:</label>
+                        <input
+                          type="number"
+                          min="0"
+                          max={item.quantity}
+                          value={partialDelivered[item.productId] ?? alreadyDelivered}
+                          onChange={(e) =>
+                            setPartialDelivered((prev) => ({
+                              ...prev,
+                              [item.productId]: Math.min(item.quantity, Math.max(0, parseInt(e.target.value, 10) || 0)),
+                            }))
+                          }
+                          className="w-16 border-2 border-pink-light rounded-lg px-2 py-1 text-center font-bold focus:border-caramel focus:outline-none"
+                        />
+                      </div>
+                    </div>
+                    {/* Progress bar */}
+                    <div className="w-full bg-pink-light rounded-full h-1.5">
+                      <div
+                        className="bg-mint-bold h-1.5 rounded-full transition-all"
+                        style={{ width: `${Math.round(((partialDelivered[item.productId] ?? alreadyDelivered) / item.quantity) * 100)}%` }}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={() => submitPartial(partialOrder)}
+                disabled={saving}
+                className="flex-1 bg-chocolate text-white py-2 rounded-full font-bold hover:bg-chocolate/80 transition-colors disabled:opacity-60"
+              >
+                {saving ? "Saving..." : "Save Delivery"}
+              </button>
+              <button
+                onClick={() => setPartialId(null)}
+                className="px-4 text-caramel hover:text-chocolate transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <main className="max-w-3xl mx-auto px-4 py-8">
         {error && (
           <div className="bg-white rounded-xl p-4 border-2 border-pink-bold/30 text-pink-bold mb-6">
@@ -246,18 +350,18 @@ export default function OrdersPage() {
           </div>
         )}
 
-        <div className="flex gap-2 mb-6">
-          {(["all", "pending", "complete"] as const).map((f) => (
+        <div className="flex gap-2 mb-6 flex-wrap">
+          {(["all", "pending", "partial", "complete"] as const).map((f) => (
             <button
               key={f}
-              onClick={() => setFilter(f)}
+              onClick={() => setFilter(f as typeof filter)}
               className={`px-4 py-2 rounded-full font-semibold text-sm transition-colors ${
                 filter === f
                   ? "bg-pink-bold text-white"
                   : "bg-white text-caramel border-2 border-pink-light hover:border-pink-mid"
               }`}
             >
-              {f.charAt(0).toUpperCase() + f.slice(1)}
+              {f === "partial" ? "Partially Delivered" : f.charAt(0).toUpperCase() + f.slice(1)}
             </button>
           ))}
         </div>
@@ -285,17 +389,15 @@ export default function OrdersPage() {
                       <p className="text-xs text-caramel/60 mt-1">{new Date(order.date).toLocaleString()}</p>
                     </div>
                     <div className="flex flex-col gap-2 items-end shrink-0">
-                      <button
-                        onClick={() => toggleStatus(order)}
-                        disabled={saving}
-                        className={`px-3 py-1 rounded-full text-sm font-semibold transition-colors disabled:opacity-60 ${
-                          order.status === "pending"
-                            ? "bg-pink-light text-pink-bold hover:bg-pink-mid hover:text-white"
-                            : "bg-mint/60 text-mint-bold hover:bg-mint-bold hover:text-white"
-                        }`}
-                      >
-                        {order.status === "pending" ? "Mark Complete" : "Reopen"}
-                      </button>
+                      {order.status !== "complete" && (
+                        <button
+                          onClick={() => openPartial(order)}
+                          disabled={saving}
+                          className="px-3 py-1 rounded-full text-sm font-semibold bg-caramel/20 text-chocolate hover:bg-caramel/40 transition-colors border border-caramel/30 disabled:opacity-60"
+                        >
+                          📦 Deliver
+                        </button>
+                      )}
                       {order.status === "pending" && (
                         <button
                           onClick={() => openReconcile(order)}
@@ -303,6 +405,15 @@ export default function OrdersPage() {
                           className="px-3 py-1 rounded-full text-sm font-semibold bg-peach text-chocolate hover:bg-caramel/20 transition-colors border border-caramel/30 disabled:opacity-60"
                         >
                           Reconcile
+                        </button>
+                      )}
+                      {order.status === "complete" && (
+                        <button
+                          onClick={() => toggleStatus(order)}
+                          disabled={saving}
+                          className="px-3 py-1 rounded-full text-sm font-semibold bg-mint/60 text-mint-bold hover:bg-mint-bold hover:text-white transition-colors disabled:opacity-60"
+                        >
+                          Reopen
                         </button>
                       )}
                       <button
@@ -314,15 +425,31 @@ export default function OrdersPage() {
                       </button>
                     </div>
                   </div>
+                  {/* Status badge */}
+                  {order.status === "partial" && (
+                    <div className="mb-2 text-xs font-bold text-caramel bg-peach px-2 py-1 rounded-lg inline-block">
+                      🕐 Partially delivered — still owed items below
+                    </div>
+                  )}
                   <div className="space-y-1">
-                    {order.items.map((item) => (
+                    {order.items.map((item) => {
+                      const del = item.delivered ?? 0;
+                      const remaining = item.quantity - del;
+                      return (
                       <div key={item.productId} className="flex justify-between text-sm gap-4">
-                        <span className="text-chocolate">
+                        <span className={remaining === 0 ? "text-caramel line-through" : "text-chocolate"}>
                           {item.name} x{item.quantity}
+                          {del > 0 && del < item.quantity && (
+                            <span className="ml-1 text-xs text-caramel">(delivered {del}, still owe {remaining})</span>
+                          )}
+                          {del >= item.quantity && (
+                            <span className="ml-1 text-xs text-mint-bold">✓ done</span>
+                          )}
                         </span>
                         <span className="text-caramel">${(item.price * item.quantity).toFixed(2)}</span>
                       </div>
-                    ))}
+                      );
+                    })}
                     {fulfillmentFee > 0 && (
                       <div className="flex justify-between text-sm gap-4">
                         <span className="text-chocolate">Home drop-off fee</span>

@@ -155,6 +155,23 @@ export async function PUT(req: NextRequest) {
     status: parsed.value.status,
   };
 
+  // Handle partial delivery — record how many were delivered for each item
+  if (parsed.value.delivered) {
+    const deliveredMap = new Map(parsed.value.delivered.map((d) => [d.productId, d.quantity]));
+    const nextItems: OrderItem[] = existing.items.map((item) => {
+      const newDelivered = deliveredMap.has(item.productId)
+        ? deliveredMap.get(item.productId)!
+        : (item.delivered ?? 0);
+      return { ...item, delivered: Math.min(newDelivered, item.quantity) };
+    });
+
+    const allDelivered = nextItems.every((i) => (i.delivered ?? 0) >= i.quantity);
+    updated.items = nextItems;
+    updated.status = allDelivered ? "complete" : "partial";
+    await saveOrder(updated);
+    return NextResponse.json(updated);
+  }
+
   if (parsed.value.items) {
     const existingItems = new Map(existing.items.map((item) => [item.productId, item]));
     const seen = new Set<string>();

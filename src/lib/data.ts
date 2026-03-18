@@ -19,6 +19,7 @@ export type OrderItem = {
   price: number;
   quantity: number;
   cost?: number;
+  delivered?: number; // how many have been handed off so far
 };
 
 export type Order = {
@@ -28,7 +29,7 @@ export type Order = {
   items: OrderItem[];
   fulfillment?: OrderFulfillment;
   fulfillmentFee?: number;
-  status: "pending" | "complete";
+  status: "pending" | "partial" | "complete";
   date: string;
   seller?: string;
 };

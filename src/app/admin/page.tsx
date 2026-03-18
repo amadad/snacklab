@@ -167,11 +167,21 @@ export default function AdminPage() {
   const topSellers = Object.values(unitsSold).sort((a, b) => b.units - a.units).slice(0, 6);
   const maxUnits = Math.max(...topSellers.map((s) => s.units), 1);
 
-  // Per-seller breakdown (owner only)
+  // Build product → seller map for fallback attribution
+  const productSellerMap: Record<string, string> = {};
+  for (const p of products) {
+    if (p.seller) productSellerMap[p.id] = p.seller;
+  }
+
+  // Per-seller breakdown (owner only) — resolve seller from order.seller or product lookup
   const sellerBreakdown: Record<string, { revenue: number; cost: number; orders: number }> = {};
   if (isOwner) {
     for (const o of completedOrders) {
-      const sellerCode = o.seller ?? "unknown";
+      // Prefer o.seller, fall back to the seller of the first product in the order
+      const sellerCode =
+        o.seller ||
+        (o.items.length > 0 ? productSellerMap[o.items[0].productId] : null) ||
+        "Store";
       if (!sellerBreakdown[sellerCode]) sellerBreakdown[sellerCode] = { revenue: 0, cost: 0, orders: 0 };
       sellerBreakdown[sellerCode].revenue += o.items.reduce((s, i) => s + i.price * i.quantity, 0) + (o.fulfillmentFee ?? 0);
       sellerBreakdown[sellerCode].cost += o.items.reduce((s, i) => s + (i.cost ?? costMap[i.productId] ?? 0) * i.quantity, 0);

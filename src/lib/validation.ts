@@ -197,7 +197,7 @@ export function parseOrderInput(input: unknown): ValidationResult<OrderInput> {
 
 export function parseOrderMutation(
   input: unknown
-): ValidationResult<{ id: string; status: "pending" | "complete"; items?: { productId: string; quantity: number }[] }> {
+): ValidationResult<{ id: string; status: "pending" | "partial" | "complete"; items?: { productId: string; quantity: number }[]; delivered?: { productId: string; quantity: number }[] }> {
   if (!isRecord(input)) {
     return { ok: false, error: "Invalid order payload." };
   }
@@ -205,30 +205,39 @@ export function parseOrderMutation(
   const id = parseId(input.id);
   if (!id.ok) return id;
 
-  if (input.status !== "pending" && input.status !== "complete") {
-    return { ok: false, error: "Status must be pending or complete." };
+  if (input.status !== "pending" && input.status !== "partial" && input.status !== "complete") {
+    return { ok: false, error: "Status must be pending, partial, or complete." };
   }
 
-  if (!Array.isArray(input.items)) {
-    return { ok: true, value: { id: id.value, status: input.status } };
-  }
-
-  const items: { productId: string; quantity: number }[] = [];
-  for (const item of input.items) {
-    if (!isRecord(item)) {
-      return { ok: false, error: "Invalid reconciled order item." };
+  // Parse optional reconcile items
+  let items: { productId: string; quantity: number }[] | undefined;
+  if (Array.isArray(input.items)) {
+    items = [];
+    for (const item of input.items) {
+      if (!isRecord(item)) return { ok: false, error: "Invalid reconciled order item." };
+      const productId = parseId(item.productId, "Product");
+      if (!productId.ok) return productId;
+      const quantity = cleanInteger(item.quantity, "Quantity", 0, 99);
+      if (!quantity.ok) return quantity;
+      items.push({ productId: productId.value, quantity: quantity.value });
     }
-
-    const productId = parseId(item.productId, "Product");
-    if (!productId.ok) return productId;
-
-    const quantity = cleanInteger(item.quantity, "Quantity", 0, 99);
-    if (!quantity.ok) return quantity;
-
-    items.push({ productId: productId.value, quantity: quantity.value });
   }
 
-  return { ok: true, value: { id: id.value, status: input.status, items } };
+  // Parse optional partial delivery quantities
+  let delivered: { productId: string; quantity: number }[] | undefined;
+  if (Array.isArray(input.delivered)) {
+    delivered = [];
+    for (const item of input.delivered) {
+      if (!isRecord(item)) return { ok: false, error: "Invalid delivery item." };
+      const productId = parseId(item.productId, "Product");
+      if (!productId.ok) return productId;
+      const quantity = cleanInteger(item.quantity, "Quantity", 0, 99);
+      if (!quantity.ok) return quantity;
+      delivered.push({ productId: productId.value, quantity: quantity.value });
+    }
+  }
+
+  return { ok: true, value: { id: id.value, status: input.status, items, delivered } };
 }
 
 export function parseDeleteOrderInput(input: unknown): ValidationResult<{ id: string; restoreStock: boolean }> {

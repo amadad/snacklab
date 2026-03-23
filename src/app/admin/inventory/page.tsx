@@ -15,6 +15,8 @@ type Product = {
   description: string;
   hot?: boolean;
   missing?: boolean;
+  stolen?: boolean;
+  stolenQty?: number;
   seller?: string;
 };
 
@@ -32,6 +34,8 @@ const empty: Omit<Product, "id"> = {
   description: "",
   hot: false,
   missing: false,
+  stolen: false,
+  stolenQty: 0,
 };
 
 export default function InventoryPage() {
@@ -169,6 +173,8 @@ export default function InventoryPage() {
       description: p.description,
       hot: p.hot ?? false,
       missing: p.missing ?? false,
+      stolen: p.stolen ?? false,
+      stolenQty: p.stolenQty ?? 0,
     });
   }
 
@@ -291,6 +297,32 @@ export default function InventoryPage() {
                   ❓ Can't Find / Missing Stock
                 </label>
               </div>
+              <div className="flex items-center gap-3 flex-wrap">
+                <input
+                  type="checkbox"
+                  id="stolen-flag"
+                  checked={form.stolen ?? false}
+                  onChange={(e) => setForm((f) => ({ ...f, stolen: e.target.checked }))}
+                  className="w-5 h-5 accent-red-500 cursor-pointer"
+                />
+                <label htmlFor="stolen-flag" className="font-semibold text-red-600 cursor-pointer">
+                  🚨 Items Stolen
+                </label>
+                {form.stolen && (
+                  <div className="flex items-center gap-2 ml-2">
+                    <label className="text-xs text-caramel font-semibold">Units stolen:</label>
+                    <input
+                      type="number"
+                      min="0"
+                      max="999"
+                      value={form.stolenQty || ""}
+                      onChange={(e) => setForm((f) => ({ ...f, stolenQty: parseInt(e.target.value, 10) || 0 }))}
+                      className="w-16 border-2 border-red-200 rounded-lg px-2 py-1 text-center font-bold focus:border-red-400 focus:outline-none text-sm"
+                      placeholder="0"
+                    />
+                  </div>
+                )}
+              </div>
             </div>
           </div>
           <div>
@@ -351,8 +383,9 @@ export default function InventoryPage() {
                   <h3 className="font-bold text-chocolate flex items-center gap-1 flex-wrap">
                     {p.name}
                     {p.hot && <span title="Hot item">🔥</span>}
-                    {p.missing && <span className="text-xs bg-yellow-100 text-yellow-700 border border-yellow-300 px-1.5 py-0.5 rounded-full">❓ Missing</span>}
-                    {p.quantity === 0 && !p.missing && <span className="text-xs bg-gray-100 text-gray-500 border border-gray-200 px-1.5 py-0.5 rounded-full">Sold Out</span>}
+                    {p.stolen && <span className="text-xs bg-red-100 text-red-700 border border-red-300 px-1.5 py-0.5 rounded-full">🚨 Stolen{p.stolenQty ? ` (${p.stolenQty})` : ""}</span>}
+                    {p.missing && !p.stolen && <span className="text-xs bg-yellow-100 text-yellow-700 border border-yellow-300 px-1.5 py-0.5 rounded-full">❓ Missing</span>}
+                    {p.quantity === 0 && !p.missing && !p.stolen && <span className="text-xs bg-gray-100 text-gray-500 border border-gray-200 px-1.5 py-0.5 rounded-full">Sold Out</span>}
                   </h3>
                   <p className="text-sm text-caramel">
                     Cost ${(p.cost || 0).toFixed(2)} → Sell ${p.price.toFixed(2)}
@@ -363,6 +396,11 @@ export default function InventoryPage() {
                     )}
                     {" · "}
                     <span className={p.quantity === 0 ? "text-pink-bold font-semibold" : ""}>{p.quantity} in stock</span>
+                    {p.stolen && p.stolenQty ? (
+                      <span className="text-red-600 font-semibold ml-1">
+                        · lost ${((p.stolenQty) * (p.price)).toFixed(2)} to theft
+                      </span>
+                    ) : null}
                   </p>
                 </div>
                 <button

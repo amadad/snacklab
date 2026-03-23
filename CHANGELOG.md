@@ -2,6 +2,9 @@
 
 All notable changes to Snacklab are documented here.
 
+## 2026-03-23
+- 🐛 Fix: quantity=0 input bug; feat: missing stock flag with storefront state (10:58 UTC, Ali Madad)
+
 ## 2026-03-18
 - ✨ Feature: owner controls (reassign seller, void, price correction), audit log, BUILD_LOG.md (10:09 UTC, Ali Madad)
 

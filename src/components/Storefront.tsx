@@ -28,9 +28,9 @@ export default function Storefront({ initialProducts }: { initialProducts: Produ
   const [submittingRequest, setSubmittingRequest] = useState(false);
   const { addItem, items } = useCart();
 
-  const inStock = initialProducts.filter((p) => p.quantity > 0 && !p.missing);
-  const soldOut = initialProducts.filter((p) => p.quantity === 0 && !p.missing);
-  const missing = initialProducts.filter((p) => p.missing);
+  const inStock = initialProducts.filter((p) => p.quantity > 0 && !p.missing && !p.stolen);
+  const soldOut = initialProducts.filter((p) => p.quantity === 0 && !p.missing && !p.stolen);
+  const unavailable = initialProducts.filter((p) => p.missing || p.stolen);
 
   async function handleRequestSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -169,7 +169,7 @@ export default function Storefront({ initialProducts }: { initialProducts: Produ
               </div>
             ))}
 
-            {missing.map((p) => (
+            {unavailable.map((p) => (
               <div
                 key={p.id}
                 className="bg-white rounded-2xl shadow-sm overflow-hidden border-2 border-yellow-200/60 opacity-50"

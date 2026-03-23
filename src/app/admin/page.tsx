@@ -31,6 +31,8 @@ type Product = {
   cost: number;
   price: number;
   quantity: number;
+  stolen?: boolean;
+  stolenQty?: number;
   seller?: string;
 };
 
@@ -214,6 +216,11 @@ export default function AdminPage() {
 
   const recentOrders = [...myOrders].reverse().slice(0, 5);
   const recentRequests = [...requests].reverse().slice(0, 5);
+
+  // Theft summary
+  const stolenItems = myProducts.filter((p) => p.stolen && (p.stolenQty ?? 0) > 0);
+  const totalStolenRevenue = stolenItems.reduce((sum, p) => sum + (p.stolenQty ?? 0) * p.price, 0);
+  const totalStolenCost = stolenItems.reduce((sum, p) => sum + (p.stolenQty ?? 0) * (p.cost || 0), 0);
 
   return (
     <div className="min-h-screen bg-peach/30">
@@ -452,6 +459,33 @@ export default function AdminPage() {
                   </div>
                 </div>
               ))}
+            </div>
+          </div>
+        )}
+
+        {/* Theft summary */}
+        {stolenItems.length > 0 && (
+          <div className="bg-white rounded-xl p-5 border-2 border-red-200 mb-6">
+            <h2 className="font-bold text-red-700 mb-3">🚨 Theft Report</h2>
+            <div className="space-y-2 mb-4">
+              {stolenItems.map((p) => (
+                <div key={p.id} className="flex justify-between text-sm">
+                  <span className="text-chocolate font-semibold">{p.name}</span>
+                  <span className="text-red-600">
+                    {p.stolenQty} units · ${((p.stolenQty ?? 0) * p.price).toFixed(2)} lost
+                  </span>
+                </div>
+              ))}
+            </div>
+            <div className="border-t border-red-100 pt-3 flex gap-6 text-sm flex-wrap">
+              <div>
+                <p className="text-caramel">Total Revenue Lost</p>
+                <p className="text-lg font-bold text-red-600">-${totalStolenRevenue.toFixed(2)}</p>
+              </div>
+              <div>
+                <p className="text-caramel">Total Cost Lost</p>
+                <p className="text-lg font-bold text-red-600">-${totalStolenCost.toFixed(2)}</p>
+              </div>
             </div>
           </div>
         )}

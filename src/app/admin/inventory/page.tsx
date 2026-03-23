@@ -17,6 +17,7 @@ type Product = {
   missing?: boolean;
   stolen?: boolean;
   stolenQty?: number;
+  comingSoon?: boolean;
   seller?: string;
 };
 
@@ -36,6 +37,7 @@ const empty: Omit<Product, "id"> = {
   missing: false,
   stolen: false,
   stolenQty: 0,
+  comingSoon: false,
 };
 
 export default function InventoryPage() {
@@ -175,6 +177,7 @@ export default function InventoryPage() {
       missing: p.missing ?? false,
       stolen: p.stolen ?? false,
       stolenQty: p.stolenQty ?? 0,
+      comingSoon: p.comingSoon ?? false,
     });
   }
 
@@ -288,6 +291,18 @@ export default function InventoryPage() {
               <div className="flex items-center gap-3">
                 <input
                   type="checkbox"
+                  id="coming-soon-flag"
+                  checked={form.comingSoon ?? false}
+                  onChange={(e) => setForm((f) => ({ ...f, comingSoon: e.target.checked }))}
+                  className="w-5 h-5 accent-purple-500 cursor-pointer"
+                />
+                <label htmlFor="coming-soon-flag" className="font-semibold text-purple-700 cursor-pointer">
+                  🔜 Coming Soon
+                </label>
+              </div>
+              <div className="flex items-center gap-3">
+                <input
+                  type="checkbox"
                   id="missing-flag"
                   checked={form.missing ?? false}
                   onChange={(e) => setForm((f) => ({ ...f, missing: e.target.checked }))}
@@ -385,7 +400,8 @@ export default function InventoryPage() {
                     {p.hot && <span title="Hot item">🔥</span>}
                     {p.stolen && <span className="text-xs bg-red-100 text-red-700 border border-red-300 px-1.5 py-0.5 rounded-full">🚨 Stolen{p.stolenQty ? ` (${p.stolenQty})` : ""}</span>}
                     {p.missing && !p.stolen && <span className="text-xs bg-yellow-100 text-yellow-700 border border-yellow-300 px-1.5 py-0.5 rounded-full">❓ Missing</span>}
-                    {p.quantity === 0 && !p.missing && !p.stolen && <span className="text-xs bg-gray-100 text-gray-500 border border-gray-200 px-1.5 py-0.5 rounded-full">Sold Out</span>}
+                    {p.comingSoon && <span className="text-xs bg-purple-100 text-purple-700 border border-purple-300 px-1.5 py-0.5 rounded-full">🔜 Coming Soon</span>}
+                    {p.quantity === 0 && !p.missing && !p.stolen && !p.comingSoon && <span className="text-xs bg-gray-100 text-gray-500 border border-gray-200 px-1.5 py-0.5 rounded-full">Sold Out</span>}
                   </h3>
                   <p className="text-sm text-caramel">
                     Cost ${(p.cost || 0).toFixed(2)} → Sell ${p.price.toFixed(2)}

@@ -12,7 +12,8 @@ export type Product = {
   hot?: boolean;
   missing?: boolean;
   stolen?: boolean;
-  stolenQty?: number;  // how many units were taken
+  stolenQty?: number;
+  comingSoon?: boolean;
   seller?: string;
 };
 

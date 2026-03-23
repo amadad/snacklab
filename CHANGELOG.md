@@ -3,6 +3,8 @@
 All notable changes to Snacklab are documented here.
 
 ## 2026-03-23
+- ✨ Feature: stolen items tracking with theft report on dashboard (11:02 UTC, Ali Madad)
+
 - 🐛 Fix: quantity=0 input bug; feat: missing stock flag with storefront state (10:58 UTC, Ali Madad)
 
 ## 2026-03-18

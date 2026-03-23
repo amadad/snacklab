@@ -114,6 +114,7 @@ export function parseProductInput(input: unknown): ValidationResult<ProductInput
       missing: cleanBoolean(input.missing),
       stolen: cleanBoolean(input.stolen),
       stolenQty: typeof input.stolenQty === "number" ? Math.max(0, Math.floor(input.stolenQty)) : 0,
+      comingSoon: cleanBoolean(input.comingSoon),
     },
   };
 }

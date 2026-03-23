@@ -28,9 +28,10 @@ export default function Storefront({ initialProducts }: { initialProducts: Produ
   const [submittingRequest, setSubmittingRequest] = useState(false);
   const { addItem, items } = useCart();
 
-  const inStock = initialProducts.filter((p) => p.quantity > 0 && !p.missing && !p.stolen);
-  const soldOut = initialProducts.filter((p) => p.quantity === 0 && !p.missing && !p.stolen);
+  const inStock = initialProducts.filter((p) => p.quantity > 0 && !p.missing && !p.stolen && !p.comingSoon);
+  const soldOut = initialProducts.filter((p) => p.quantity === 0 && !p.missing && !p.stolen && !p.comingSoon);
   const unavailable = initialProducts.filter((p) => p.missing || p.stolen);
+  const comingSoon = initialProducts.filter((p) => p.comingSoon);
 
   async function handleRequestSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -196,6 +197,44 @@ export default function Storefront({ initialProducts }: { initialProducts: Produ
                   </div>
                   <div className="mt-3 w-full bg-yellow-100 text-yellow-700 py-2 rounded-full font-semibold text-center text-sm">
                     Temporarily Unavailable
+                  </div>
+                </div>
+              </div>
+            ))}
+
+            {comingSoon.map((p) => (
+              <div
+                key={p.id}
+                className="bg-white rounded-2xl shadow-sm overflow-hidden border-2 border-purple-200/60"
+              >
+                {p.image ? (
+                  <div className="relative w-full h-48">
+                    <Image
+                      src={p.image}
+                      alt={p.name}
+                      fill
+                      unoptimized
+                      sizes="(max-width: 768px) 50vw, 33vw"
+                      className="object-cover opacity-70"
+                    />
+                    <div className="absolute top-2 left-2 bg-purple-600 text-white text-xs font-bold px-2 py-1 rounded-full">
+                      🔜 Coming Soon
+                    </div>
+                  </div>
+                ) : (
+                  <div className="w-full h-48 bg-purple-50 flex flex-col items-center justify-center gap-2">
+                    <span className="text-4xl">🔜</span>
+                    <span className="text-xs font-bold text-purple-500">Coming Soon</span>
+                  </div>
+                )}
+                <div className="p-4">
+                  <h2 className="font-bold text-lg text-chocolate">{p.name}</h2>
+                  {p.description && <p className="text-sm text-caramel mt-1">{p.description}</p>}
+                  <div className="flex items-center justify-between mt-3">
+                    <span className="text-pink-bold font-bold text-lg">${p.price.toFixed(2)}</span>
+                  </div>
+                  <div className="mt-3 w-full bg-purple-100 text-purple-700 py-2 rounded-full font-semibold text-center text-sm">
+                    Coming Soon
                   </div>
                 </div>
               </div>

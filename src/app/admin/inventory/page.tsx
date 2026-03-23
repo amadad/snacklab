@@ -14,6 +14,7 @@ type Product = {
   quantity: number;
   description: string;
   hot?: boolean;
+  missing?: boolean;
   seller?: string;
 };
 
@@ -30,6 +31,7 @@ const empty: Omit<Product, "id"> = {
   quantity: 0,
   description: "",
   hot: false,
+  missing: false,
 };
 
 export default function InventoryPage() {
@@ -166,6 +168,7 @@ export default function InventoryPage() {
       quantity: p.quantity,
       description: p.description,
       hot: p.hot ?? false,
+      missing: p.missing ?? false,
     });
   }
 
@@ -241,8 +244,8 @@ export default function InventoryPage() {
                 type="number"
                 required
                 min="0"
-                value={form.quantity || ""}
-                onChange={(e) => setForm((f) => ({ ...f, quantity: parseInt(e.target.value, 10) || 0 }))}
+                value={form.quantity === 0 ? "0" : form.quantity || ""}
+                onChange={(e) => setForm((f) => ({ ...f, quantity: e.target.value === "" ? 0 : parseInt(e.target.value, 10) || 0 }))}
                 className="w-full border-2 border-pink-light rounded-lg px-3 py-2 focus:border-pink-bold focus:outline-none"
               />
             </div>
@@ -263,17 +266,31 @@ export default function InventoryPage() {
                 />
               )}
             </div>
-            <div className="flex items-center gap-3 pt-6">
-              <input
-                type="checkbox"
-                id="hot-flag"
-                checked={form.hot ?? false}
-                onChange={(e) => setForm((f) => ({ ...f, hot: e.target.checked }))}
-                className="w-5 h-5 accent-pink-bold cursor-pointer"
-              />
-              <label htmlFor="hot-flag" className="font-semibold text-chocolate cursor-pointer">
-                🔥 Mark as Hot / Selling Fast
-              </label>
+            <div className="flex flex-col gap-2 pt-6">
+              <div className="flex items-center gap-3">
+                <input
+                  type="checkbox"
+                  id="hot-flag"
+                  checked={form.hot ?? false}
+                  onChange={(e) => setForm((f) => ({ ...f, hot: e.target.checked }))}
+                  className="w-5 h-5 accent-pink-bold cursor-pointer"
+                />
+                <label htmlFor="hot-flag" className="font-semibold text-chocolate cursor-pointer">
+                  🔥 Hot / Selling Fast
+                </label>
+              </div>
+              <div className="flex items-center gap-3">
+                <input
+                  type="checkbox"
+                  id="missing-flag"
+                  checked={form.missing ?? false}
+                  onChange={(e) => setForm((f) => ({ ...f, missing: e.target.checked }))}
+                  className="w-5 h-5 accent-caramel cursor-pointer"
+                />
+                <label htmlFor="missing-flag" className="font-semibold text-caramel cursor-pointer">
+                  ❓ Can't Find / Missing Stock
+                </label>
+              </div>
             </div>
           </div>
           <div>
@@ -331,8 +348,11 @@ export default function InventoryPage() {
                   <div className="w-16 h-16 rounded-lg bg-peach flex items-center justify-center text-2xl">🍡</div>
                 )}
                 <div className="flex-1">
-                  <h3 className="font-bold text-chocolate flex items-center gap-1">
-                    {p.name} {p.hot && <span title="Hot item">🔥</span>}
+                  <h3 className="font-bold text-chocolate flex items-center gap-1 flex-wrap">
+                    {p.name}
+                    {p.hot && <span title="Hot item">🔥</span>}
+                    {p.missing && <span className="text-xs bg-yellow-100 text-yellow-700 border border-yellow-300 px-1.5 py-0.5 rounded-full">❓ Missing</span>}
+                    {p.quantity === 0 && !p.missing && <span className="text-xs bg-gray-100 text-gray-500 border border-gray-200 px-1.5 py-0.5 rounded-full">Sold Out</span>}
                   </h3>
                   <p className="text-sm text-caramel">
                     Cost ${(p.cost || 0).toFixed(2)} → Sell ${p.price.toFixed(2)}
@@ -342,7 +362,7 @@ export default function InventoryPage() {
                       </span>
                     )}
                     {" · "}
-                    {p.quantity} in stock
+                    <span className={p.quantity === 0 ? "text-pink-bold font-semibold" : ""}>{p.quantity} in stock</span>
                   </p>
                 </div>
                 <button
@@ -354,6 +374,22 @@ export default function InventoryPage() {
                   }`}
                 >
                   {p.hot ? "🔥 Hot" : "Mark Hot"}
+                </button>
+                <button
+                  onClick={() => {
+                    fetch("/api/products", {
+                      method: "PUT",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ ...p, missing: !p.missing }),
+                    }).then(() => load());
+                  }}
+                  className={`text-sm px-3 py-1 rounded-full font-semibold transition-colors border ${
+                    p.missing
+                      ? "bg-yellow-100 text-yellow-700 border-yellow-300 hover:bg-yellow-200"
+                      : "bg-white text-caramel border-caramel/30 hover:bg-yellow-50"
+                  }`}
+                >
+                  {p.missing ? "❓ Missing" : "Mark Missing"}
                 </button>
                 <button
                   onClick={() => startEdit(p)}

@@ -10,6 +10,7 @@ export type Product = {
   quantity: number;
   description: string;
   hot?: boolean;
+  missing?: boolean;
   seller?: string;
 };
 
@@ -71,6 +72,10 @@ const REQUEST_PREFIX = "request:";
 const AUDIT_PREFIX = "audit:";
 const MIGRATION_KEY = "data:migrated:v2";
 
+// In-memory flag: migration check runs at most once per worker instance,
+// not on every KV call. Cuts ~50% of KV reads under normal traffic.
+let _migrationDone = false;
+
 async function getKV() {
   const { env } = await getCloudflareContext({ async: true });
   return env.STORE_KV;
@@ -78,8 +83,12 @@ async function getKV() {
 
 async function maybeMigrateLegacyData() {
   const kv = await getKV();
+
+  if (_migrationDone) return kv;
+
   const migrated = await kv.get(MIGRATION_KEY);
   if (migrated) {
+    _migrationDone = true;
     return kv;
   }
 
@@ -102,11 +111,13 @@ async function maybeMigrateLegacyData() {
   }
 
   await kv.put(MIGRATION_KEY, new Date().toISOString());
+  _migrationDone = true;
   return kv;
 }
 
-async function listKeysByPrefix(prefix: string) {
-  const kv = await maybeMigrateLegacyData();
+// Internal helpers that accept an already-resolved KV handle to avoid
+// redundant maybeMigrateLegacyData() calls within a single request.
+async function _listKeysByPrefix(kv: KVNamespace, prefix: string) {
   const keys: string[] = [];
   let cursor: string | undefined;
 
@@ -119,9 +130,25 @@ async function listKeysByPrefix(prefix: string) {
   return keys;
 }
 
+async function _getJson<T>(kv: KVNamespace, key: string) {
+  return (await kv.get(key, "json")) as T | null;
+}
+
+async function _listJsonByPrefix<T>(kv: KVNamespace, prefix: string) {
+  const keys = await _listKeysByPrefix(kv, prefix);
+  const entries = await Promise.all(keys.map((key) => _getJson<T>(kv, key)));
+  return entries.filter((entry) => entry !== null) as T[];
+}
+
+// Public helpers: resolve KV + migration once, then delegate.
+async function listKeysByPrefix(prefix: string) {
+  const kv = await maybeMigrateLegacyData();
+  return _listKeysByPrefix(kv, prefix);
+}
+
 async function getJson<T>(key: string) {
   const kv = await maybeMigrateLegacyData();
-  return (await kv.get(key, "json")) as T | null;
+  return _getJson<T>(kv, key);
 }
 
 async function putJson(key: string, value: unknown) {
@@ -135,9 +162,8 @@ async function deleteKey(key: string) {
 }
 
 async function listJsonByPrefix<T>(prefix: string) {
-  const keys = await listKeysByPrefix(prefix);
-  const entries = await Promise.all(keys.map((key) => getJson<T>(key)));
-  return entries.filter((entry) => entry !== null) as T[];
+  const kv = await maybeMigrateLegacyData();
+  return _listJsonByPrefix<T>(kv, prefix);
 }
 
 export async function getProducts(): Promise<Product[]> {

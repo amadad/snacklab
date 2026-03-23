@@ -28,8 +28,9 @@ export default function Storefront({ initialProducts }: { initialProducts: Produ
   const [submittingRequest, setSubmittingRequest] = useState(false);
   const { addItem, items } = useCart();
 
-  const inStock = initialProducts.filter((p) => p.quantity > 0);
-  const soldOut = initialProducts.filter((p) => p.quantity === 0);
+  const inStock = initialProducts.filter((p) => p.quantity > 0 && !p.missing);
+  const soldOut = initialProducts.filter((p) => p.quantity === 0 && !p.missing);
+  const missing = initialProducts.filter((p) => p.missing);
 
   async function handleRequestSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -163,6 +164,38 @@ export default function Storefront({ initialProducts }: { initialProducts: Produ
                   </div>
                   <div className="mt-3 w-full bg-caramel/20 text-caramel/60 py-2 rounded-full font-semibold text-center text-sm">
                     Sold Out
+                  </div>
+                </div>
+              </div>
+            ))}
+
+            {missing.map((p) => (
+              <div
+                key={p.id}
+                className="bg-white rounded-2xl shadow-sm overflow-hidden border-2 border-yellow-200/60 opacity-50"
+              >
+                {p.image ? (
+                  <div className="relative w-full h-48">
+                    <Image
+                      src={p.image}
+                      alt={p.name}
+                      fill
+                      unoptimized
+                      sizes="(max-width: 768px) 50vw, 33vw"
+                      className="object-cover grayscale"
+                    />
+                  </div>
+                ) : (
+                  <div className="w-full h-48 bg-yellow-50 flex items-center justify-center text-4xl">❓</div>
+                )}
+                <div className="p-4">
+                  <h2 className="font-bold text-lg text-chocolate/50">{p.name}</h2>
+                  {p.description && <p className="text-sm text-caramel/50 mt-1">{p.description}</p>}
+                  <div className="flex items-center justify-between mt-3">
+                    <span className="text-pink-bold/50 font-bold text-lg">${p.price.toFixed(2)}</span>
+                  </div>
+                  <div className="mt-3 w-full bg-yellow-100 text-yellow-700 py-2 rounded-full font-semibold text-center text-sm">
+                    Temporarily Unavailable
                   </div>
                 </div>
               </div>

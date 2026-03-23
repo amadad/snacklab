@@ -111,6 +111,7 @@ export function parseProductInput(input: unknown): ValidationResult<ProductInput
       quantity: quantity.value,
       description: description.value,
       hot: cleanBoolean(input.hot),
+      missing: cleanBoolean(input.missing),
     },
   };
 }

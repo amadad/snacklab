@@ -253,8 +253,8 @@ export default function InventoryPage() {
                 type="number"
                 required
                 min="0"
-                value={form.quantity === 0 ? "0" : form.quantity || ""}
-                onChange={(e) => setForm((f) => ({ ...f, quantity: e.target.value === "" ? 0 : parseInt(e.target.value, 10) || 0 }))}
+                value={form.quantity}
+                onChange={(e) => setForm((f) => ({ ...f, quantity: Math.max(0, parseInt(e.target.value, 10) || 0) }))}
                 className="w-full border-2 border-pink-light rounded-lg px-3 py-2 focus:border-pink-bold focus:outline-none"
               />
             </div>

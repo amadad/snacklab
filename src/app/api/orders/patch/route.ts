@@ -1,37 +1,26 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getOrder, saveOrder, writeAuditEntry } from "@/lib/data";
-import { requireAdminRequest, getSessionInfo, ADMIN_SESSION_COOKIE, getConfiguredAdminPassword } from "@/lib/auth";
+import { requireAdminRequest, getSessionInfo, ADMIN_SESSION_COOKIE } from "@/lib/auth";
 import { parseOwnerPatch } from "@/lib/validation";
-
-async function getActor(req: NextRequest): Promise<string> {
-  const token = req.cookies.get(ADMIN_SESSION_COOKIE)?.value;
-  const adminPassword = await getConfiguredAdminPassword();
-  if (!adminPassword) return "owner";
-  const { seller, role } = await getSessionInfo(token);
-  return role === "owner" ? "owner" : (seller ?? "unknown");
-}
 
 export async function POST(req: NextRequest) {
   const unauthorized = await requireAdminRequest(req);
   if (unauthorized) return unauthorized;
 
-  // Owner-only endpoint
   const token = req.cookies.get(ADMIN_SESSION_COOKIE)?.value;
-  const adminPassword = await getConfiguredAdminPassword();
-  if (adminPassword) {
-    const { role } = await getSessionInfo(token);
-    if (role !== "owner") {
-      return NextResponse.json({ error: "Owner access required." }, { status: 403 });
-    }
+  const { seller, role } = await getSessionInfo(token);
+
+  if (role !== "owner") {
+    return NextResponse.json({ error: "Owner access required." }, { status: 403 });
   }
+
+  const actor = role === "owner" ? "owner" : (seller ?? "unknown");
 
   const parsed = parseOwnerPatch(await req.json());
   if (!parsed.ok) return NextResponse.json({ error: parsed.error }, { status: 400 });
 
   const order = await getOrder(parsed.value.id);
   if (!order) return NextResponse.json({ error: "Order not found." }, { status: 404 });
-
-  const actor = await getActor(req);
 
   if (parsed.value.op === "reassign_seller") {
     const before = { seller: order.seller ?? null };

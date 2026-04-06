@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import Navbar from "@/components/Navbar";
 import { useCart } from "@/components/CartProvider";
 import type { Product } from "@/lib/data";
@@ -26,12 +27,34 @@ export default function Storefront({ initialProducts }: { initialProducts: Produ
   const [requestSent, setRequestSent] = useState(false);
   const [requestError, setRequestError] = useState<string | null>(null);
   const [submittingRequest, setSubmittingRequest] = useState(false);
+  const [addedIds, setAddedIds] = useState<Set<string>>(new Set());
   const { addItem, items } = useCart();
 
   const inStock = initialProducts.filter((p) => p.quantity > 0 && !p.missing && !p.stolen && !p.comingSoon);
   const soldOut = initialProducts.filter((p) => p.quantity === 0 && !p.missing && !p.stolen && !p.comingSoon);
   const unavailable = initialProducts.filter((p) => p.missing || p.stolen);
   const comingSoon = initialProducts.filter((p) => p.comingSoon);
+
+  function handleAdd(p: Product) {
+    const inCart = items.find((i) => i.productId === p.id)?.quantity ?? 0;
+    if (inCart >= p.quantity) return;
+
+    addItem({
+      productId: p.id,
+      name: p.name,
+      price: p.price,
+      image: p.image,
+      maxQuantity: p.quantity,
+    });
+    setAddedIds((prev) => new Set(prev).add(p.id));
+    setTimeout(() => {
+      setAddedIds((prev) => {
+        const next = new Set(prev);
+        next.delete(p.id);
+        return next;
+      });
+    }, 1200);
+  }
 
   async function handleRequestSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -64,25 +87,30 @@ export default function Storefront({ initialProducts }: { initialProducts: Produ
   }
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen flex flex-col">
       <Navbar />
-      <main className="max-w-5xl mx-auto px-4 py-8">
+      <main className="max-w-5xl mx-auto px-4 py-8 flex-1">
         <h1 className="text-4xl font-bold text-center text-pink-bold mb-2">Welcome to Snack Lab!</h1>
         <p className="text-center text-caramel mb-8">Browse our yummy selection</p>
 
         {inStock.length === 0 && soldOut.length === 0 ? (
-          <p className="text-center text-caramel/70 text-lg mt-20">No items yet — check back soon!</p>
+          <div className="text-center py-20">
+            <div className="text-6xl mb-4">🍬</div>
+            <p className="text-caramel/70 text-lg">No items yet — check back soon!</p>
+          </div>
         ) : (
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
-            {inStock.map((p) => {
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+            {inStock.map((p, i) => {
               const lowStock = p.quantity <= 3;
-              const inCart = items.find((i) => i.productId === p.id)?.quantity ?? 0;
+              const inCart = items.find((it) => it.productId === p.id)?.quantity ?? 0;
               const atMax = inCart >= p.quantity;
+              const justAdded = addedIds.has(p.id);
 
               return (
                 <div
                   key={p.id}
-                  className="bg-white rounded-2xl shadow-md overflow-hidden border-2 border-pink-light hover:border-pink-mid hover:shadow-lg transition-all hover:-translate-y-1 relative"
+                  className="bg-white rounded-2xl shadow-md overflow-hidden border-2 border-pink-light hover:border-pink-mid hover:shadow-lg transition-all hover:-translate-y-1 relative animate-fade-in-up"
+                  style={{ animationDelay: `${i * 80}ms` }}
                 >
                   {p.hot && (
                     <div className="absolute top-2 left-2 bg-orange-500 text-white text-xs font-bold px-2 py-1 rounded-full z-10 flex items-center gap-1">
@@ -90,14 +118,14 @@ export default function Storefront({ initialProducts }: { initialProducts: Produ
                     </div>
                   )}
                   {p.image ? (
-                    <div className="relative w-full h-48">
+                    <div className="relative w-full h-48 overflow-hidden">
                       <Image
                         src={p.image}
                         alt={p.name}
                         fill
                         unoptimized
-                        sizes="(max-width: 768px) 50vw, 33vw"
-                        className="object-cover"
+                        sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, 33vw"
+                        className="object-cover transition-transform duration-300 hover:scale-110"
                       />
                     </div>
                   ) : (
@@ -105,32 +133,29 @@ export default function Storefront({ initialProducts }: { initialProducts: Produ
                   )}
                   <div className="p-4">
                     <h2 className="font-bold text-lg text-chocolate">{p.name}</h2>
-                    {p.description && <p className="text-sm text-caramel mt-1">{p.description}</p>}
+                    {p.description && <p className="text-sm text-caramel mt-1 line-clamp-2">{p.description}</p>}
                     <div className="flex items-center justify-between mt-3 gap-4">
                       <span className="text-pink-bold font-bold text-lg">${p.price.toFixed(2)}</span>
-                      <span className={`text-xs font-semibold ${lowStock ? "text-orange-500" : "text-caramel"}`}>
-                        {lowStock ? `⚡ Only ${p.quantity} left!` : `${p.quantity} left`}
-                      </span>
+                      {lowStock ? (
+                        <span className="text-xs font-bold text-pink-bold bg-pink-light px-2 py-0.5 rounded-full">
+                          Only {p.quantity} left!
+                        </span>
+                      ) : (
+                        <span className="text-xs text-caramel">{p.quantity} left</span>
+                      )}
                     </div>
                     <button
-                      onClick={() =>
-                        !atMax &&
-                        addItem({
-                          productId: p.id,
-                          name: p.name,
-                          price: p.price,
-                          image: p.image,
-                          maxQuantity: p.quantity,
-                        })
-                      }
+                      onClick={() => handleAdd(p)}
                       disabled={atMax}
-                      className={`mt-3 w-full py-2 rounded-full font-semibold transition-colors active:scale-95 ${
-                        atMax
-                          ? "bg-caramel/30 text-caramel cursor-not-allowed"
-                          : "bg-pink-bold text-white hover:bg-pink-mid"
+                      className={`mt-3 w-full py-2 rounded-full font-semibold transition-all active:scale-95 focus:outline-none focus:ring-2 focus:ring-pink-bold/40 ${
+                        justAdded
+                          ? "bg-mint-bold text-white scale-[1.02]"
+                          : atMax
+                            ? "bg-caramel/30 text-caramel cursor-not-allowed"
+                            : "bg-pink-bold text-white hover:bg-pink-mid"
                       }`}
                     >
-                      {atMax ? `Max in cart (${inCart})` : "Add to Cart"}
+                      {justAdded ? "Added!" : atMax ? `Max in cart (${inCart})` : "Add to Cart"}
                     </button>
                   </div>
                 </div>
@@ -149,7 +174,7 @@ export default function Storefront({ initialProducts }: { initialProducts: Produ
                       alt={p.name}
                       fill
                       unoptimized
-                      sizes="(max-width: 768px) 50vw, 33vw"
+                      sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, 33vw"
                       className="object-cover grayscale"
                     />
                   </div>
@@ -158,7 +183,7 @@ export default function Storefront({ initialProducts }: { initialProducts: Produ
                 )}
                 <div className="p-4">
                   <h2 className="font-bold text-lg text-chocolate/60">{p.name}</h2>
-                  {p.description && <p className="text-sm text-caramel/60 mt-1">{p.description}</p>}
+                  {p.description && <p className="text-sm text-caramel/60 mt-1 line-clamp-2">{p.description}</p>}
                   <div className="flex items-center justify-between mt-3">
                     <span className="text-pink-bold/60 font-bold text-lg">${p.price.toFixed(2)}</span>
                     <span className="text-xs font-semibold text-caramel/60">Sold out</span>
@@ -182,7 +207,7 @@ export default function Storefront({ initialProducts }: { initialProducts: Produ
                       alt={p.name}
                       fill
                       unoptimized
-                      sizes="(max-width: 768px) 50vw, 33vw"
+                      sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, 33vw"
                       className="object-cover grayscale"
                     />
                   </div>
@@ -191,7 +216,7 @@ export default function Storefront({ initialProducts }: { initialProducts: Produ
                 )}
                 <div className="p-4">
                   <h2 className="font-bold text-lg text-chocolate/50">{p.name}</h2>
-                  {p.description && <p className="text-sm text-caramel/50 mt-1">{p.description}</p>}
+                  {p.description && <p className="text-sm text-caramel/50 mt-1 line-clamp-2">{p.description}</p>}
                   <div className="flex items-center justify-between mt-3">
                     <span className="text-pink-bold/50 font-bold text-lg">${p.price.toFixed(2)}</span>
                   </div>
@@ -214,7 +239,7 @@ export default function Storefront({ initialProducts }: { initialProducts: Produ
                       alt={p.name}
                       fill
                       unoptimized
-                      sizes="(max-width: 768px) 50vw, 33vw"
+                      sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, 33vw"
                       className="object-cover opacity-70"
                     />
                     <div className="absolute top-2 left-2 bg-purple-600 text-white text-xs font-bold px-2 py-1 rounded-full">
@@ -229,7 +254,7 @@ export default function Storefront({ initialProducts }: { initialProducts: Produ
                 )}
                 <div className="p-4">
                   <h2 className="font-bold text-lg text-chocolate">{p.name}</h2>
-                  {p.description && <p className="text-sm text-caramel mt-1">{p.description}</p>}
+                  {p.description && <p className="text-sm text-caramel mt-1 line-clamp-2">{p.description}</p>}
                   <div className="flex items-center justify-between mt-3">
                     <span className="text-pink-bold font-bold text-lg">${p.price.toFixed(2)}</span>
                   </div>
@@ -250,7 +275,7 @@ export default function Storefront({ initialProducts }: { initialProducts: Produ
                 setShowRequest(!showRequest);
                 setRequestError(null);
               }}
-              className="mt-2 text-pink-bold font-semibold hover:underline text-sm"
+              className="mt-2 text-pink-bold font-semibold hover:underline text-sm focus:outline-none focus:ring-2 focus:ring-pink-bold/40 rounded"
             >
               {showRequest ? "Never mind" : "Request an item →"}
             </button>
@@ -273,7 +298,7 @@ export default function Storefront({ initialProducts }: { initialProducts: Produ
                       required
                       value={requestForm.name}
                       onChange={(e) => setRequestForm((f) => ({ ...f, name: e.target.value }))}
-                      className="w-full border-2 border-pink-light rounded-lg px-3 py-2 text-sm focus:border-pink-bold focus:outline-none"
+                      className="w-full border-2 border-pink-light rounded-lg px-3 py-2 text-sm focus:border-pink-bold focus:outline-none focus:ring-2 focus:ring-pink-bold/30"
                       placeholder="Name"
                     />
                   </div>
@@ -284,7 +309,7 @@ export default function Storefront({ initialProducts }: { initialProducts: Produ
                       required
                       value={requestForm.email}
                       onChange={(e) => setRequestForm((f) => ({ ...f, email: e.target.value }))}
-                      className="w-full border-2 border-pink-light rounded-lg px-3 py-2 text-sm focus:border-pink-bold focus:outline-none"
+                      className="w-full border-2 border-pink-light rounded-lg px-3 py-2 text-sm focus:border-pink-bold focus:outline-none focus:ring-2 focus:ring-pink-bold/30"
                       placeholder="email@example.com"
                     />
                   </div>
@@ -295,7 +320,7 @@ export default function Storefront({ initialProducts }: { initialProducts: Produ
                       required
                       value={requestForm.item}
                       onChange={(e) => setRequestForm((f) => ({ ...f, item: e.target.value }))}
-                      className="w-full border-2 border-pink-light rounded-lg px-3 py-2 text-sm focus:border-pink-bold focus:outline-none"
+                      className="w-full border-2 border-pink-light rounded-lg px-3 py-2 text-sm focus:border-pink-bold focus:outline-none focus:ring-2 focus:ring-pink-bold/30"
                       placeholder="e.g. Takis, Sour Patch Kids..."
                     />
                   </div>
@@ -304,7 +329,7 @@ export default function Storefront({ initialProducts }: { initialProducts: Produ
                     <textarea
                       value={requestForm.note}
                       onChange={(e) => setRequestForm((f) => ({ ...f, note: e.target.value }))}
-                      className="w-full border-2 border-pink-light rounded-lg px-3 py-2 text-sm focus:border-pink-bold focus:outline-none"
+                      className="w-full border-2 border-pink-light rounded-lg px-3 py-2 text-sm focus:border-pink-bold focus:outline-none focus:ring-2 focus:ring-pink-bold/30"
                       rows={2}
                       placeholder="How much would you pay? Any other notes?"
                     />
@@ -313,7 +338,7 @@ export default function Storefront({ initialProducts }: { initialProducts: Produ
                   <button
                     type="submit"
                     disabled={submittingRequest}
-                    className="w-full bg-pink-bold text-white py-2 rounded-full font-semibold hover:bg-pink-mid transition-colors disabled:opacity-60"
+                    className="w-full bg-pink-bold text-white py-2 rounded-full font-semibold hover:bg-pink-mid transition-colors disabled:opacity-60 focus:outline-none focus:ring-2 focus:ring-pink-bold/40"
                   >
                     {submittingRequest ? "Sending..." : "Send Request"}
                   </button>
@@ -328,6 +353,13 @@ export default function Storefront({ initialProducts }: { initialProducts: Produ
           </p>
         </div>
       </main>
+
+      <footer className="border-t border-pink-light/60 px-6 py-4 flex items-center justify-between text-sm text-caramel/60">
+        <span>Snack Lab</span>
+        <Link href="/admin" className="hover:text-caramel transition-colors">
+          Admin
+        </Link>
+      </footer>
     </div>
   );
 }

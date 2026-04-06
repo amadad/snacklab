@@ -1,0 +1,67 @@
+# CLAUDE.md — Snack Lab
+
+Student-run snack storefront. Customers browse/order, pay cash at pickup. Sellers manage their own inventory. Owner oversees all.
+
+## Stack
+
+- Next.js 16 (App Router) — storefront is server-rendered, admin is `"use client"`
+- Tailwind CSS v4 (theme tokens + custom animations in `globals.css` `@theme inline`)
+- Cloudflare Workers via OpenNext (`@opennextjs/cloudflare`)
+- KV (`STORE_KV`) — per-record keys with prefix (`product:`, `order:`, `request:`, `audit:`)
+- R2 (`STORE_R2`) — product image uploads
+
+## Commands
+
+```bash
+npm run dev          # local dev server
+npm run build        # Next.js build
+npm run preview      # Cloudflare local preview (build + wrangler dev)
+npm run deploy       # Cloudflare deploy (build + wrangler deploy)
+npx tsc --noEmit     # typecheck
+```
+
+## Architecture
+
+### Auth
+
+HMAC-signed session cookies (`snacklab_admin`, 12h expiry):
+- `POST /api/auth` — login with password + seller code, sets cookie
+- `GET /api/auth` — check session
+- `DELETE /api/auth` — logout
+- Protected routes use `requireAdminRequest(req)` from `src/lib/auth.ts`
+
+Roles: **owner** (OWNER_CODES) sees everything; **seller** (SELLER_CODES) sees own products/orders only.
+
+### Data
+
+Per-record KV keys (not single-blob). Legacy migration from flat arrays runs once per worker instance.
+- Types in `src/lib/data.ts`: Product, Order, OrderItem, ItemRequest, AuditEntry
+- Validation in `src/lib/validation.ts`: parseProductInput, parseOrderInput, parseOrderMutation, parseOwnerPatch
+
+### Cart
+
+Client-side React context (`CartProvider`). Persisted to localStorage (`snacklab-cart`). Enforces `maxQuantity` per product. Server validates stock on checkout.
+
+### Fulfillment
+
+Three methods: during-school (free), after-school (free, needs time slot), house-dropoff (+$2, needs time + location). Logic in `src/lib/fulfillment.ts`.
+
+## Env Vars
+
+Set via `wrangler secret put` or Cloudflare dashboard — **never** in wrangler.toml.
+
+| Var | Purpose |
+|-----|---------|
+| `ADMIN_PASSWORD` | Required. Admin login password |
+| `SELLER_CODES` | Comma-sep seller codes (e.g. ZAIN,SYRA) |
+| `OWNER_CODES` | Comma-sep owner codes (full access) |
+| `PLATFORM_FEE_PCT` | Platform fee % for sellers (default 20) |
+| `DEFAULT_SELLER` | Fallback seller attribution |
+
+## Gotchas
+
+- KV has no transactions — concurrent order POSTs can race on stock. Server validates + attempts rollback but gap exists.
+- Admin layout auth is a client-side UX gate; real protection is `requireAdminRequest()` on API routes.
+- Images served through `/api/image/[key]` proxy from R2 with immutable 1-year cache.
+- `wrangler.toml` must not contain secrets — use `wrangler secret put`.
+- Orders page is 697 LOC — modals share tightly coupled state, hard to split further without context/reducer refactor.

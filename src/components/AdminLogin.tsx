@@ -53,7 +53,7 @@ export default function AdminLogin() {
             value={seller}
             onChange={(e) => setSeller(e.target.value.toUpperCase())}
             placeholder="e.g. ZAIN"
-            className="w-full border-2 border-pink-light rounded-lg px-3 py-2 focus:border-pink-bold focus:outline-none uppercase font-mono tracking-widest"
+            className="w-full border-2 border-pink-light rounded-lg px-3 py-2 focus:border-pink-bold focus:outline-none focus:ring-2 focus:ring-pink-bold/30 uppercase font-mono tracking-widest"
             autoFocus
             autoComplete="off"
             disabled={loading}
@@ -68,7 +68,7 @@ export default function AdminLogin() {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             placeholder="Password"
-            className="w-full border-2 border-pink-light rounded-lg px-3 py-2 focus:border-pink-bold focus:outline-none"
+            className="w-full border-2 border-pink-light rounded-lg px-3 py-2 focus:border-pink-bold focus:outline-none focus:ring-2 focus:ring-pink-bold/30"
             disabled={loading}
           />
         </div>

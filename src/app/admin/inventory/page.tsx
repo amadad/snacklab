@@ -209,7 +209,7 @@ export default function InventoryPage() {
                 required
                 value={form.name}
                 onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-                className="w-full border-2 border-pink-light rounded-lg px-3 py-2 focus:border-pink-bold focus:outline-none"
+                className="w-full border-2 border-pink-light rounded-lg px-3 py-2 focus:border-pink-bold focus:outline-none focus:ring-2 focus:ring-pink-bold/30"
               />
             </div>
             <div>
@@ -221,7 +221,7 @@ export default function InventoryPage() {
                 step="0.01"
                 value={form.cost || ""}
                 onChange={(e) => setForm((f) => ({ ...f, cost: parseFloat(e.target.value) || 0 }))}
-                className="w-full border-2 border-pink-light rounded-lg px-3 py-2 focus:border-pink-bold focus:outline-none"
+                className="w-full border-2 border-pink-light rounded-lg px-3 py-2 focus:border-pink-bold focus:outline-none focus:ring-2 focus:ring-pink-bold/30"
                 placeholder="What you paid"
               />
             </div>
@@ -236,7 +236,7 @@ export default function InventoryPage() {
                 step="0.01"
                 value={form.price || ""}
                 onChange={(e) => setForm((f) => ({ ...f, price: parseFloat(e.target.value) || 0 }))}
-                className="w-full border-2 border-pink-light rounded-lg px-3 py-2 focus:border-pink-bold focus:outline-none"
+                className="w-full border-2 border-pink-light rounded-lg px-3 py-2 focus:border-pink-bold focus:outline-none focus:ring-2 focus:ring-pink-bold/30"
                 placeholder="What you charge"
               />
             </div>
@@ -255,7 +255,7 @@ export default function InventoryPage() {
                 min="0"
                 value={form.quantity}
                 onChange={(e) => setForm((f) => ({ ...f, quantity: Math.max(0, parseInt(e.target.value, 10) || 0) }))}
-                className="w-full border-2 border-pink-light rounded-lg px-3 py-2 focus:border-pink-bold focus:outline-none"
+                className="w-full border-2 border-pink-light rounded-lg px-3 py-2 focus:border-pink-bold focus:outline-none focus:ring-2 focus:ring-pink-bold/30"
               />
             </div>
           </div>
@@ -332,7 +332,7 @@ export default function InventoryPage() {
                       max="999"
                       value={form.stolenQty || ""}
                       onChange={(e) => setForm((f) => ({ ...f, stolenQty: parseInt(e.target.value, 10) || 0 }))}
-                      className="w-16 border-2 border-red-200 rounded-lg px-2 py-1 text-center font-bold focus:border-red-400 focus:outline-none text-sm"
+                      className="w-16 border-2 border-red-200 rounded-lg px-2 py-1 text-center font-bold focus:border-red-400 focus:outline-none focus:ring-2 focus:ring-red-300/30 text-sm"
                       placeholder="0"
                     />
                   </div>
@@ -345,7 +345,7 @@ export default function InventoryPage() {
             <textarea
               value={form.description}
               onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
-              className="w-full border-2 border-pink-light rounded-lg px-3 py-2 focus:border-pink-bold focus:outline-none"
+              className="w-full border-2 border-pink-light rounded-lg px-3 py-2 focus:border-pink-bold focus:outline-none focus:ring-2 focus:ring-pink-bold/30"
               rows={2}
             />
           </div>

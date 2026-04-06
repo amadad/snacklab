@@ -83,7 +83,7 @@ export function parseSessionPayload(token: string | undefined): Partial<AdminSes
   }
 }
 
-export async function getSellerFromToken(token: string | undefined, secret: string): Promise<string | undefined> {
+export function getSellerFromToken(token: string | undefined): string | undefined {
   return parseSessionPayload(token).seller;
 }
 

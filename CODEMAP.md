@@ -1,0 +1,60 @@
+# Codemap — Snack Lab
+
+## Layout
+
+```
+src/
+├── app/
+│   ├── layout.tsx                  # Root layout (Quicksand font, CartProvider)
+│   ├── globals.css                 # Tailwind theme + keyframe animations (badge-pop, fade-in-up, bounce-in)
+│   ├── page.tsx                    # SSR storefront (force-dynamic, passes products to Storefront)
+│   ├── new/page.tsx                # Changelog page
+│   ├── cart/
+│   │   └── page.tsx                # Cart + checkout + fulfillment selection + order confirmation
+│   ├── admin/
+│   │   ├── layout.tsx              # Server-side auth gate → AdminLogin component
+│   │   ├── page.tsx                # Dashboard: stats, charts, seller breakdown, theft report (~563 LOC)
+│   │   ├── inventory/page.tsx      # CRUD products with flags (hot, missing, stolen, comingSoon)
+│   │   └── orders/page.tsx         # Orders: status, reconcile, partial delivery, audit, owner ops (~697 LOC)
+│   └── api/
+│       ├── auth/route.ts           # POST: login, GET: check, DELETE: logout
+│       ├── session/route.ts        # GET: role + seller + config for client
+│       ├── products/route.ts       # CRUD (POST/PUT/DELETE require admin, scoped by seller)
+│       ├── orders/route.ts         # GET (admin), POST (public checkout), PUT (status/reconcile/delivery), DELETE (cancel)
+│       ├── orders/patch/route.ts   # POST: owner-only ops (reassign, void, price correction) + audit
+│       ├── requests/route.ts       # GET (admin), POST (public item request)
+│       ├── audit/route.ts          # GET: audit log by orderId
+│       ├── upload/route.ts         # POST: image upload to R2 (admin, 5MB, JPG/PNG/WEBP/GIF)
+│       └── image/[key]/route.ts    # GET: serve image from R2 (public, immutable cache)
+├── components/
+│   ├── CartProvider.tsx            # Cart context + localStorage + maxQuantity enforcement
+│   ├── Navbar.tsx                  # Sticky nav, badge bounce animation, cart total
+│   ├── Storefront.tsx              # Product grid (in-stock/sold-out/unavailable/coming-soon) + request form
+│   ├── AdminLogin.tsx              # Seller code + password login form
+│   ├── AdminLogoutButton.tsx       # Logout button (DELETE /api/auth)
+│   └── Tooltip.tsx                 # Reusable click-to-open tooltip with outside-click dismiss
+├── lib/
+│   ├── auth.ts                     # HMAC sessions, role helpers, requireAdminRequest
+│   ├── data.ts                     # KV data layer: per-record CRUD, audit log, legacy migration
+│   ├── validation.ts               # Input parsers: product, order, mutation, owner patch, item request
+│   ├── fulfillment.ts              # Fulfillment methods, fees, labels, time slots
+│   └── images.ts                   # R2 image cleanup (delete unused after product edit/delete)
+```
+
+## Key Flows
+
+**Customer order**: `page.tsx` (SSR) → `Storefront` → `addItem()` (CartProvider, maxQty enforced) → `cart/page.tsx` → fulfillment selection → `POST /api/orders` → validates stock → reserves inventory (with rollback) → saves order
+
+**Admin login**: `admin/layout.tsx` (server) → checks cookie → `AdminLogin` (client) → `POST /api/auth` → cookie set → `router.refresh()`
+
+**Partial delivery**: `admin/orders` → 📦 Deliver → modal per-item → `PUT /api/orders` with `delivered[]` → auto-completes when all items fully delivered
+
+**Owner audit**: `admin/orders` → 🕵️ Log → `GET /api/audit?orderId=` → drawer with action/actor/before/after/note
+
+## Custom Animations (globals.css)
+
+| Token | Use |
+|-------|-----|
+| `animate-badge-pop` | Cart count badge bounce on add |
+| `animate-fade-in-up` | Staggered product card entrance |
+| `animate-bounce-in` | Confirmation page celebration |

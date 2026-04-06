@@ -324,7 +324,7 @@ export default function OrdersPage() {
                           ),
                         }))
                       }
-                      className="w-16 border-2 border-pink-light rounded-lg px-2 py-1 text-center font-bold focus:border-pink-bold focus:outline-none"
+                      className="w-16 border-2 border-pink-light rounded-lg px-2 py-1 text-center font-bold focus:border-pink-bold focus:outline-none focus:ring-2 focus:ring-pink-bold/30"
                     />
                   </div>
                 </div>
@@ -382,7 +382,7 @@ export default function OrdersPage() {
                               [item.productId]: Math.min(item.quantity, Math.max(0, parseInt(e.target.value, 10) || 0)),
                             }))
                           }
-                          className="w-16 border-2 border-pink-light rounded-lg px-2 py-1 text-center font-bold focus:border-caramel focus:outline-none"
+                          className="w-16 border-2 border-pink-light rounded-lg px-2 py-1 text-center font-bold focus:border-caramel focus:outline-none focus:ring-2 focus:ring-caramel/30"
                         />
                       </div>
                     </div>
@@ -427,14 +427,14 @@ export default function OrdersPage() {
               placeholder="e.g. DOODAR"
               value={reassignSeller}
               onChange={(e) => setReassignSeller(e.target.value.toUpperCase())}
-              className="w-full border-2 border-pink-light rounded-lg px-3 py-2 font-bold uppercase mb-3 focus:border-pink-bold focus:outline-none"
+              className="w-full border-2 border-pink-light rounded-lg px-3 py-2 font-bold uppercase mb-3 focus:border-pink-bold focus:outline-none focus:ring-2 focus:ring-pink-bold/30"
             />
             <input
               type="text"
               placeholder="Note (optional)"
               value={reassignNote}
               onChange={(e) => setReassignNote(e.target.value)}
-              className="w-full border-2 border-pink-light rounded-lg px-3 py-2 text-sm mb-4 focus:border-pink-bold focus:outline-none"
+              className="w-full border-2 border-pink-light rounded-lg px-3 py-2 text-sm mb-4 focus:border-pink-bold focus:outline-none focus:ring-2 focus:ring-pink-bold/30"
             />
             <div className="flex gap-2">
               <button onClick={() => void submitReassign()} disabled={saving || !reassignSeller.trim()} className="flex-1 bg-chocolate text-white py-2 rounded-full font-bold hover:bg-chocolate/80 transition-colors disabled:opacity-60">
@@ -466,7 +466,7 @@ export default function OrdersPage() {
                     placeholder={item.price.toFixed(2)}
                     value={priceCorrItems[item.productId] ?? ""}
                     onChange={(e) => setPriceCorrItems((prev) => ({ ...prev, [item.productId]: e.target.value }))}
-                    className="w-24 border-2 border-pink-light rounded-lg px-2 py-1 text-center focus:border-caramel focus:outline-none"
+                    className="w-24 border-2 border-pink-light rounded-lg px-2 py-1 text-center focus:border-caramel focus:outline-none focus:ring-2 focus:ring-caramel/30"
                   />
                 </div>
               ))}
@@ -476,7 +476,7 @@ export default function OrdersPage() {
               placeholder="Note (optional, e.g. 'agreed discount')"
               value={priceCorrNote}
               onChange={(e) => setPriceCorrNote(e.target.value)}
-              className="w-full border-2 border-pink-light rounded-lg px-3 py-2 text-sm mb-4 focus:border-caramel focus:outline-none"
+              className="w-full border-2 border-pink-light rounded-lg px-3 py-2 text-sm mb-4 focus:border-caramel focus:outline-none focus:ring-2 focus:ring-caramel/30"
             />
             <div className="flex gap-2">
               <button onClick={() => void submitPriceCorr(o)} disabled={saving} className="flex-1 bg-chocolate text-white py-2 rounded-full font-bold hover:bg-chocolate/80 transition-colors disabled:opacity-60">

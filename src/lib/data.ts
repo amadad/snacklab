@@ -134,7 +134,11 @@ async function _listKeysByPrefix(kv: KVNamespace, prefix: string) {
 }
 
 async function _getJson<T>(kv: KVNamespace, key: string) {
-  return (await kv.get(key, "json")) as T | null;
+  try {
+    return (await kv.get(key, "json")) as T | null;
+  } catch {
+    return null;
+  }
 }
 
 async function _listJsonByPrefix<T>(kv: KVNamespace, prefix: string) {

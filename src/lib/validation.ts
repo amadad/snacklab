@@ -1,4 +1,4 @@
-import type { Product } from "@/lib/data";
+import type { Product } from "@/lib/types";
 import {
   isFulfillmentMethod,
   isValidTimeSlot,

@@ -1,73 +1,5 @@
 import { getCloudflareContext } from "@opennextjs/cloudflare";
-import type { OrderFulfillment } from "@/lib/fulfillment";
-
-export type Product = {
-  id: string;
-  name: string;
-  cost: number;
-  price: number;
-  image: string;
-  quantity: number;
-  description: string;
-  hot?: boolean;
-  missing?: boolean;
-  stolen?: boolean;
-  stolenQty?: number;
-  comingSoon?: boolean;
-  seller?: string;
-};
-
-export type OrderItem = {
-  productId: string;
-  name: string;
-  price: number;
-  quantity: number;
-  cost?: number;
-  delivered?: number; // how many have been handed off so far
-};
-
-export type Order = {
-  id: string;
-  name: string;
-  email: string;
-  items: OrderItem[];
-  fulfillment?: OrderFulfillment;
-  fulfillmentFee?: number;
-  status: "pending" | "partial" | "complete";
-  date: string;
-  seller?: string;
-  voided?: boolean; // excluded from stats/earnings; record kept for audit
-};
-
-export type ItemRequest = {
-  id: string;
-  name: string;
-  email: string;
-  item: string;
-  note: string;
-  date: string;
-};
-
-export type AuditAction =
-  | "reassign_seller"
-  | "void_order"
-  | "unvoid_order"
-  | "price_correction"
-  | "status_change"
-  | "reconcile"
-  | "partial_delivery"
-  | "cancel_order";
-
-export type AuditEntry = {
-  id: string;
-  orderId: string;
-  action: AuditAction;
-  actor: string; // seller code or "owner"
-  date: string;
-  before: Record<string, unknown>;
-  after: Record<string, unknown>;
-  note?: string;
-};
+import type { Product, Order, ItemRequest, AuditEntry } from "@/lib/types";
 
 const PRODUCT_PREFIX = "product:";
 const ORDER_PREFIX = "order:";
@@ -148,11 +80,6 @@ async function _listJsonByPrefix<T>(kv: KVNamespace, prefix: string) {
 }
 
 // Public helpers: resolve KV + migration once, then delegate.
-async function listKeysByPrefix(prefix: string) {
-  const kv = await maybeMigrateLegacyData();
-  return _listKeysByPrefix(kv, prefix);
-}
-
 async function getJson<T>(key: string) {
   const kv = await maybeMigrateLegacyData();
   return _getJson<T>(kv, key);

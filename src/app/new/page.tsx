@@ -60,7 +60,7 @@ export default function ChangelogPage() {
 
       <main className="max-w-2xl mx-auto px-4 py-12">
         <h1 className="text-3xl font-bold text-chocolate mb-2">Changelog</h1>
-        <p className="text-caramel mb-10 text-sm">What's been built, in order.</p>
+        <p className="text-caramel mb-10 text-sm">What&apos;s been built, in order.</p>
 
         <div className="space-y-10">
           {changelog.map((entry) => (

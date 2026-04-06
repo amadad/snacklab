@@ -15,6 +15,7 @@ Student-run snack storefront. Customers browse/order, pay cash at pickup. Seller
 ```bash
 npm run dev          # local dev server
 npm run build        # Next.js build
+npm run test         # vitest run
 npm run preview      # Cloudflare local preview (build + wrangler dev)
 npm run deploy       # Cloudflare deploy (build + wrangler deploy)
 npx tsc --noEmit     # typecheck
@@ -35,7 +36,7 @@ Roles: **owner** (OWNER_CODES) sees everything; **seller** (SELLER_CODES) sees o
 ### Data
 
 Per-record KV keys (not single-blob). Legacy migration from flat arrays runs once per worker instance.
-- Types in `src/lib/data.ts`: Product, Order, OrderItem, ItemRequest, AuditEntry
+- Types in `src/lib/types.ts`: Product, Order, OrderItem, ItemRequest, AuditEntry, ClientSession
 - Validation in `src/lib/validation.ts`: parseProductInput, parseOrderInput, parseOrderMutation, parseOwnerPatch
 
 ### Cart
@@ -64,4 +65,5 @@ Set via `wrangler secret put` or Cloudflare dashboard — **never** in wrangler.
 - Admin layout auth is a client-side UX gate; real protection is `requireAdminRequest()` on API routes.
 - Images served through `/api/image/[key]` proxy from R2 with immutable 1-year cache.
 - `wrangler.toml` must not contain secrets — use `wrangler secret put`.
-- Orders page is 697 LOC — modals share tightly coupled state, hard to split further without context/reducer refactor.
+- Orders page state/actions extracted to `useOrderActions.ts` hook; page is render-only (~437 LOC).
+- Middleware (`src/middleware.ts`) adds CSRF origin check and security headers (CSP, X-Frame-Options). CSRF allows non-browser clients through — API auth still protects mutations.

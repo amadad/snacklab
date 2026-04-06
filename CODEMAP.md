@@ -5,17 +5,19 @@
 ```
 src/
 ├── app/
-│   ├── layout.tsx                  # Root layout (Quicksand font, CartProvider)
+│   ├── layout.tsx                  # Root layout (Quicksand font, CartProvider, ErrorBoundary)
 │   ├── globals.css                 # Tailwind theme + keyframe animations (badge-pop, fade-in-up, bounce-in)
 │   ├── page.tsx                    # SSR storefront (force-dynamic, passes products to Storefront)
 │   ├── new/page.tsx                # Changelog page
 │   ├── cart/
 │   │   └── page.tsx                # Cart + checkout + fulfillment selection + order confirmation
 │   ├── admin/
-│   │   ├── layout.tsx              # Server-side auth gate → AdminLogin component
-│   │   ├── page.tsx                # Dashboard: stats, charts, seller breakdown, theft report (~563 LOC)
+│   │   ├── layout.tsx              # Server-side auth gate → AdminLogin component + ErrorBoundary
+│   │   ├── page.tsx                # Dashboard: stats, charts, seller breakdown, theft report
 │   │   ├── inventory/page.tsx      # CRUD products with flags (hot, missing, stolen, comingSoon)
-│   │   └── orders/page.tsx         # Orders: status, reconcile, partial delivery, audit, owner ops (~697 LOC)
+│   │   └── orders/
+│   │       ├── page.tsx            # Orders UI: status, reconcile, partial delivery, audit, owner ops
+│   │       └── useOrderActions.ts  # Orders state + API calls hook (extracted from page)
 │   └── api/
 │       ├── auth/route.ts           # POST: login, GET: check, DELETE: logout
 │       ├── session/route.ts        # GET: role + seller + config for client
@@ -28,17 +30,24 @@ src/
 │       └── image/[key]/route.ts    # GET: serve image from R2 (public, immutable cache)
 ├── components/
 │   ├── CartProvider.tsx            # Cart context + localStorage + maxQuantity enforcement
+│   ├── ErrorBoundary.tsx           # Client error boundary with key-based retry/remount
 │   ├── Navbar.tsx                  # Sticky nav, badge bounce animation, cart total
-│   ├── Storefront.tsx              # Product grid (in-stock/sold-out/unavailable/coming-soon) + request form
+│   ├── ProductCard.tsx             # Product card with variants: in-stock, sold-out, unavailable, coming-soon
+│   ├── Storefront.tsx              # Product grid layout + item request form (cards via ProductCard)
 │   ├── AdminLogin.tsx              # Seller code + password login form
 │   ├── AdminLogoutButton.tsx       # Logout button (DELETE /api/auth)
 │   └── Tooltip.tsx                 # Reusable click-to-open tooltip with outside-click dismiss
+├── hooks/
+│   └── useAdminData.ts             # Shared hook: fetch session + products/orders/requests for admin pages
 ├── lib/
 │   ├── auth.ts                     # HMAC sessions, role helpers, requireAdminRequest
 │   ├── data.ts                     # KV data layer: per-record CRUD, audit log, legacy migration
+│   ├── types.ts                    # Shared types: Product, Order, OrderItem, ItemRequest, AuditEntry, ClientSession
 │   ├── validation.ts               # Input parsers: product, order, mutation, owner patch, item request
 │   ├── fulfillment.ts              # Fulfillment methods, fees, labels, time slots
 │   └── images.ts                   # R2 image cleanup (delete unused after product edit/delete)
+├── middleware.ts                    # CSRF origin check + security headers (CSP, X-Frame-Options)
+vitest.config.ts                     # Vitest config with @/ alias
 ```
 
 ## Key Flows
@@ -58,3 +67,10 @@ src/
 | `animate-badge-pop` | Cart count badge bounce on add |
 | `animate-fade-in-up` | Staggered product card entrance |
 | `animate-bounce-in` | Confirmation page celebration |
+
+## Tests
+
+| File | Coverage |
+|------|----------|
+| `src/lib/auth.test.ts` | Session tokens: round-trip, tamper, expiry, parse, seller extraction |
+| `src/lib/validation.test.ts` | All input parsers: products, orders, mutations, owner patches, requests |

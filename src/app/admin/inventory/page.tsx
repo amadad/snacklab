@@ -1,30 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import AdminLogoutButton from "@/components/AdminLogoutButton";
-
-type Product = {
-  id: string;
-  name: string;
-  cost: number;
-  price: number;
-  image: string;
-  quantity: number;
-  description: string;
-  hot?: boolean;
-  missing?: boolean;
-  stolen?: boolean;
-  stolenQty?: number;
-  comingSoon?: boolean;
-  seller?: string;
-};
-
-type Session = {
-  seller?: string;
-  role?: "owner" | "seller";
-};
+import type { Product } from "@/lib/types";
+import { useAdminData } from "@/hooks/useAdminData";
 
 const empty: Omit<Product, "id"> = {
   name: "",
@@ -41,35 +22,21 @@ const empty: Omit<Product, "id"> = {
 };
 
 export default function InventoryPage() {
-  const [allProducts, setAllProducts] = useState<Product[]>([]);
-  const [session, setSession] = useState<Session | null>(null);
+  const admin = useAdminData({ products: true });
   const [form, setForm] = useState(empty);
   const [editId, setEditId] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [localError, setLocalError] = useState<string | null>(null);
 
+  const session = admin.session;
+  const error = localError ?? admin.error;
   const isOwner = session?.role === "owner";
   const mySeller = session?.seller;
-  const products = isOwner ? allProducts : allProducts.filter((p) => p.seller === mySeller);
+  const products = isOwner ? admin.products : admin.products.filter((p) => p.seller === mySeller);
 
-  async function load() {
-    const [sessionRes, productsRes] = await Promise.all([
-      fetch("/api/session"),
-      fetch("/api/products"),
-    ]);
-    if (!sessionRes.ok || !productsRes.ok) {
-      throw new Error("Could not load inventory.");
-    }
-    setSession((await sessionRes.json()) as Session);
-    setAllProducts((await productsRes.json()) as Product[]);
-  }
-
-  useEffect(() => {
-    void load().catch((err) => {
-      setError(err instanceof Error ? err.message : "Could not load inventory.");
-    });
-  }, []);
+  function setError(msg: string | null) { setLocalError(msg); }
+  async function load() { await admin.reload(); }
 
   async function handleUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -309,7 +276,7 @@ export default function InventoryPage() {
                   className="w-5 h-5 accent-caramel cursor-pointer"
                 />
                 <label htmlFor="missing-flag" className="font-semibold text-caramel cursor-pointer">
-                  ❓ Can't Find / Missing Stock
+                  ❓ Can&apos;t Find / Missing Stock
                 </label>
               </div>
               <div className="flex items-center gap-3 flex-wrap">
@@ -431,11 +398,22 @@ export default function InventoryPage() {
                 </button>
                 <button
                   onClick={() => {
+                    setError(null);
                     fetch("/api/products", {
                       method: "PUT",
                       headers: { "Content-Type": "application/json" },
                       body: JSON.stringify({ ...p, missing: !p.missing }),
-                    }).then(() => load());
+                    })
+                      .then(async (res) => {
+                        if (!res.ok) {
+                          const data = (await res.json().catch(() => null)) as { error?: string } | null;
+                          throw new Error(data?.error ?? "Could not update item.");
+                        }
+                        await load();
+                      })
+                      .catch((err) => {
+                        setError(err instanceof Error ? err.message : "Could not update item.");
+                      });
                   }}
                   className={`text-sm px-3 py-1 rounded-full font-semibold transition-colors border ${
                     p.missing

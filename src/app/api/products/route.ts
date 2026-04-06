@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { deleteProduct, genId, getProduct, getProducts, saveProduct, type Product } from "@/lib/data";
+import { deleteProduct, genId, getProduct, getProducts, saveProduct } from "@/lib/data";
+import type { Product } from "@/lib/types";
 import { requireAdminRequest, getSessionInfo, ADMIN_SESSION_COOKIE } from "@/lib/auth";
 import { deleteManagedImageIfUnused } from "@/lib/images";
 import { parseId, parseProductInput } from "@/lib/validation";
@@ -18,7 +19,7 @@ export async function POST(req: NextRequest) {
   const unauthorized = await requireAdminRequest(req);
   if (unauthorized) return unauthorized;
 
-  const { seller, role } = await getSession(req);
+  const { seller } = await getSession(req);
 
   const parsed = parseProductInput(await req.json());
   if (!parsed.ok) {
@@ -72,7 +73,7 @@ export async function PUT(req: NextRequest) {
   await saveProduct(updated);
 
   if (existing.image && existing.image !== updated.image) {
-    void deleteManagedImageIfUnused(existing.image, updated.id).catch(() => undefined);
+    void deleteManagedImageIfUnused(existing.image, updated.id).catch((e) => console.error("Image cleanup failed:", e));
   }
 
   return NextResponse.json(updated);
@@ -102,7 +103,7 @@ export async function DELETE(req: NextRequest) {
 
   await deleteProduct(id.value);
   if (existing.image) {
-    void deleteManagedImageIfUnused(existing.image, id.value).catch(() => undefined);
+    void deleteManagedImageIfUnused(existing.image, id.value).catch((e) => console.error("Image cleanup failed:", e));
   }
 
   return NextResponse.json({ ok: true });

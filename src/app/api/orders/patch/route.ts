@@ -8,13 +8,13 @@ export async function POST(req: NextRequest) {
   if (unauthorized) return unauthorized;
 
   const token = req.cookies.get(ADMIN_SESSION_COOKIE)?.value;
-  const { seller, role } = await getSessionInfo(token);
+  const { role } = await getSessionInfo(token);
 
   if (role !== "owner") {
     return NextResponse.json({ error: "Owner access required." }, { status: 403 });
   }
 
-  const actor = role === "owner" ? "owner" : (seller ?? "unknown");
+  const actor = "owner";
 
   const parsed = parseOwnerPatch(await req.json());
   if (!parsed.ok) return NextResponse.json({ error: parsed.error }, { status: 400 });

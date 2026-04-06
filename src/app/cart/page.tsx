@@ -215,13 +215,15 @@ export default function CartPage() {
                   <div className="flex items-center gap-2">
                     <button
                       onClick={() => updateQuantity(item.productId, item.quantity - 1)}
+                      aria-label={`Decrease quantity of ${item.name}`}
                       className="w-10 h-10 rounded-full bg-pink-light text-pink-bold font-bold hover:bg-pink-mid hover:text-white transition-colors focus:outline-none focus:ring-2 focus:ring-pink-bold/40"
                     >
                       -
                     </button>
-                    <span className="w-8 text-center font-bold">{item.quantity}</span>
+                    <span className="w-8 text-center font-bold" aria-label={`${item.quantity} in cart`}>{item.quantity}</span>
                     <button
                       onClick={() => updateQuantity(item.productId, item.quantity + 1)}
+                      aria-label={`Increase quantity of ${item.name}`}
                       className="w-10 h-10 rounded-full bg-pink-light text-pink-bold font-bold hover:bg-pink-mid hover:text-white transition-colors focus:outline-none focus:ring-2 focus:ring-pink-bold/40"
                     >
                       +
@@ -269,6 +271,8 @@ export default function CartPage() {
               {error && (
                 <div
                   ref={errorRef}
+                  role="alert"
+                  aria-live="assertive"
                   className="rounded-xl border border-pink-bold/30 bg-peach/60 p-3 text-sm text-pink-bold space-y-2"
                 >
                   <p>{error}</p>
@@ -291,8 +295,9 @@ export default function CartPage() {
                 <h2 className="text-xl font-bold text-chocolate">Checkout</h2>
 
                 <div>
-                  <label className="block text-sm font-semibold text-caramel mb-1">Your Name</label>
+                  <label htmlFor="checkout-name" className="block text-sm font-semibold text-caramel mb-1">Your Name</label>
                   <input
+                    id="checkout-name"
                     type="text"
                     required
                     value={name}
@@ -302,8 +307,9 @@ export default function CartPage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-semibold text-caramel mb-1">Email</label>
+                  <label htmlFor="checkout-email" className="block text-sm font-semibold text-caramel mb-1">Email</label>
                   <input
+                    id="checkout-email"
                     type="email"
                     required
                     value={email}
@@ -342,8 +348,9 @@ export default function CartPage() {
 
                 {fulfillmentNeedsTime && (
                   <div>
-                    <label className="block text-sm font-semibold text-caramel mb-1">After-school time slot</label>
+                    <label htmlFor="checkout-timeslot" className="block text-sm font-semibold text-caramel mb-1">After-school time slot</label>
                     <select
+                      id="checkout-timeslot"
                       value={timeSlot}
                       required={fulfillmentNeedsTime}
                       onChange={(e) => setTimeSlot(e.target.value)}
@@ -361,10 +368,11 @@ export default function CartPage() {
 
                 {fulfillmentNeedsLocation && (
                   <div>
-                    <label className="block text-sm font-semibold text-caramel mb-1">
+                    <label htmlFor="checkout-location" className="block text-sm font-semibold text-caramel mb-1">
                       {getLocationDetailsLabel(fulfillmentMethod)}
                     </label>
                     <textarea
+                      id="checkout-location"
                       value={locationDetails}
                       required={fulfillmentNeedsLocation}
                       onChange={(e) => setLocationDetails(e.target.value)}

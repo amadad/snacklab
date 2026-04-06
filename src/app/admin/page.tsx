@@ -1,104 +1,17 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import Link from "next/link";
 import AdminLogoutButton from "@/components/AdminLogoutButton";
 import Tooltip from "@/components/Tooltip";
-import { getFulfillmentSummary, type OrderFulfillment } from "@/lib/fulfillment";
-
-type OrderItem = {
-  productId: string;
-  name: string;
-  price: number;
-  quantity: number;
-  cost?: number;
-};
-
-type Order = {
-  id: string;
-  name: string;
-  items: OrderItem[];
-  fulfillment?: OrderFulfillment;
-  fulfillmentFee?: number;
-  status: "pending" | "partial" | "complete";
-  date: string;
-  seller?: string;
-  voided?: boolean;
-};
-
-type Product = {
-  id: string;
-  name: string;
-  cost: number;
-  price: number;
-  quantity: number;
-  stolen?: boolean;
-  stolenQty?: number;
-  seller?: string;
-};
-
-type ItemRequest = {
-  id: string;
-  name: string;
-  email: string;
-  item: string;
-  note: string;
-  date: string;
-};
-
-type Session = {
-  authenticated: boolean;
-  seller?: string;
-  role?: "owner" | "seller";
-  platformFeePct?: number;
-  defaultSeller?: string;
-};
+import { getFulfillmentSummary } from "@/lib/fulfillment";
+import { useAdminData } from "@/hooks/useAdminData";
 
 export default function AdminPage() {
-  const [products, setProducts] = useState<Product[]>([]);
-  const [orders, setOrders] = useState<Order[]>([]);
-  const [requests, setRequests] = useState<ItemRequest[]>([]);
-  const [session, setSession] = useState<Session | null>(null);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    let active = true;
-
-    async function load() {
-      try {
-        const [sessionRes, productsRes, ordersRes, requestsRes] = await Promise.all([
-          fetch("/api/session"),
-          fetch("/api/products"),
-          fetch("/api/orders"),
-          fetch("/api/requests"),
-        ]);
-
-        if (!sessionRes.ok || !productsRes.ok || !ordersRes.ok || !requestsRes.ok) {
-          throw new Error("Could not load admin dashboard.");
-        }
-
-        const [sessionData, productsData, ordersData, requestsData] = (await Promise.all([
-          sessionRes.json(),
-          productsRes.json(),
-          ordersRes.json(),
-          requestsRes.json(),
-        ])) as [Session, Product[], Order[], ItemRequest[]];
-
-        if (!active) return;
-
-        setSession(sessionData);
-        setProducts(productsData);
-        setOrders(ordersData);
-        setRequests(requestsData);
-      } catch (err) {
-        if (!active) return;
-        setError(err instanceof Error ? err.message : "Could not load admin dashboard.");
-      }
-    }
-
-    void load();
-    return () => { active = false; };
-  }, []);
+  const { session, products, orders, requests, error } = useAdminData({
+    products: true,
+    orders: true,
+    requests: true,
+  });
 
   const isOwner = session?.role === "owner";
   const mySeller = session?.seller;
@@ -107,10 +20,11 @@ export default function AdminPage() {
 
   // Filter data by role
   const myProducts = isOwner ? products : products.filter((p) => p.seller === mySeller);
+  const myProductIds = new Set(myProducts.map((p) => p.id));
   const myOrders = isOwner
     ? orders
     : orders.filter((o) =>
-        o.items.some((i) => myProducts.find((p) => p.id === i.productId))
+        o.items.some((i) => myProductIds.has(i.productId))
       );
 
   const costMap: Record<string, number> = {};
@@ -468,8 +382,7 @@ export default function AdminPage() {
             </div>
             <p className="text-xs text-caramel mb-4">Stock levels across your products</p>
             <div className="space-y-3">
-              {[...myProducts].sort((a, b) => a.quantity - b.quantity).slice(0, 8).map((p) => {
-                const max = Math.max(...myProducts.map((x) => x.quantity), 1);
+              {(() => { const max = Math.max(...myProducts.map((x) => x.quantity), 1); return [...myProducts].sort((a, b) => a.quantity - b.quantity).slice(0, 8).map((p) => {
                 const pct = Math.round((p.quantity / max) * 100);
                 const color = p.quantity === 0 ? "bg-pink-bold" : p.quantity <= 2 ? "bg-caramel" : "bg-mint-bold";
                 const label = p.quantity === 0 ? "Sold out" : p.quantity <= 2 ? "Low" : "OK";
@@ -485,7 +398,7 @@ export default function AdminPage() {
                     </div>
                   </div>
                 );
-              })}
+              }); })()}
             </div>
           </div>
         )}

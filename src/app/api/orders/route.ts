@@ -8,10 +8,8 @@ import {
   getProducts,
   saveOrder,
   saveProduct,
-  type Order,
-  type OrderItem,
-  type Product,
 } from "@/lib/data";
+import type { Order, OrderItem, Product } from "@/lib/types";
 import { requireAdminRequest, getSellerFromToken, ADMIN_SESSION_COOKIE } from "@/lib/auth";
 import { getFulfillmentFee } from "@/lib/fulfillment";
 import { parseDeleteOrderInput, parseOrderInput, parseOrderMutation } from "@/lib/validation";
@@ -35,7 +33,7 @@ async function applyProductChanges(changes: Map<string, ProductChange>) {
     for (const productId of appliedIds.reverse()) {
       const change = changes.get(productId);
       if (change) {
-        await saveProduct(change.before).catch(() => undefined);
+        await saveProduct(change.before).catch((e) => console.error("Stock rollback failed:", e));
       }
     }
 
@@ -53,6 +51,9 @@ export async function GET(req: NextRequest) {
   return NextResponse.json(orders);
 }
 
+// Public endpoint — no auth required (customers place orders).
+// TODO: Add rate limiting (Cloudflare rate limiting rule or IP-based throttle)
+// to prevent bots from draining stock.
 export async function POST(req: NextRequest) {
   const parsed = parseOrderInput(await req.json());
   if (!parsed.ok) {
@@ -124,7 +125,7 @@ export async function POST(req: NextRequest) {
     await saveOrder(order);
   } catch {
     for (const change of productChanges.values()) {
-      await saveProduct(change.before).catch(() => undefined);
+      await saveProduct(change.before).catch((e) => console.error("Stock rollback failed:", e));
     }
 
     return NextResponse.json({ error: "Could not place your order. Please try again." }, { status: 500 });
@@ -239,7 +240,7 @@ export async function PUT(req: NextRequest) {
       await saveOrder(updated);
     } catch {
       for (const change of productChanges.values()) {
-        await saveProduct(change.before).catch(() => undefined);
+        await saveProduct(change.before).catch((e) => console.error("Stock rollback failed:", e));
       }
 
       return NextResponse.json({ error: "Could not update the order." }, { status: 500 });
@@ -292,7 +293,7 @@ export async function DELETE(req: NextRequest) {
     await deleteOrder(parsed.value.id);
   } catch {
     for (const change of productChanges.values()) {
-      await saveProduct(change.before).catch(() => undefined);
+      await saveProduct(change.before).catch((e) => console.error("Stock rollback failed:", e));
     }
 
     return NextResponse.json({ error: "Could not delete the order." }, { status: 500 });

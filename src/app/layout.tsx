@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Quicksand } from "next/font/google";
 import { CartProvider } from "@/components/CartProvider";
+import ErrorBoundary from "@/components/ErrorBoundary";
 import "./globals.css";
 
 const quicksand = Quicksand({
@@ -22,7 +23,9 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${quicksand.variable} font-sans antialiased`}>
-        <CartProvider>{children}</CartProvider>
+        <ErrorBoundary>
+          <CartProvider>{children}</CartProvider>
+        </ErrorBoundary>
       </body>
     </html>
   );

@@ -42,7 +42,7 @@ async function signValue(secret: string, value: string) {
   return Buffer.from(signature).toString("base64url");
 }
 
-function constantTimeEqual(a: string, b: string) {
+export function constantTimeEqual(a: string, b: string) {
   const aBytes = Buffer.from(a);
   const bBytes = Buffer.from(b);
 

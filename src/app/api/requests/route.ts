@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdminRequest } from "@/lib/auth";
-import { genId, getItemRequests, saveItemRequest, type ItemRequest } from "@/lib/data";
+import { genId, getItemRequests, saveItemRequest } from "@/lib/data";
+import type { ItemRequest } from "@/lib/types";
 import { parseItemRequestInput } from "@/lib/validation";
 
 export async function GET(req: NextRequest) {

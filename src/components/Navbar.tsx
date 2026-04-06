@@ -10,12 +10,14 @@ export default function Navbar() {
   const prevCount = useRef(count);
 
   useEffect(() => {
-    if (count > prevCount.current) {
-      setBounce(true);
-      const t = setTimeout(() => setBounce(false), 350);
-      return () => clearTimeout(t);
+    if (count <= prevCount.current) {
+      prevCount.current = count;
+      return;
     }
     prevCount.current = count;
+    const t = setTimeout(() => setBounce(true), 0);
+    const t2 = setTimeout(() => setBounce(false), 350);
+    return () => { clearTimeout(t); clearTimeout(t2); };
   }, [count]);
 
   return (

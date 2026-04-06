@@ -1,11 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import Image from "next/image";
 import Link from "next/link";
 import Navbar from "@/components/Navbar";
+import ProductCard from "@/components/ProductCard";
 import { useCart } from "@/components/CartProvider";
-import type { Product } from "@/lib/data";
+import type { Product } from "@/lib/types";
 
 type RequestFormState = {
   name: string;
@@ -100,169 +100,25 @@ export default function Storefront({ initialProducts }: { initialProducts: Produ
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-            {inStock.map((p, i) => {
-              const lowStock = p.quantity <= 3;
-              const inCart = items.find((it) => it.productId === p.id)?.quantity ?? 0;
-              const atMax = inCart >= p.quantity;
-              const justAdded = addedIds.has(p.id);
-
-              return (
-                <div
-                  key={p.id}
-                  className="bg-white rounded-2xl shadow-md overflow-hidden border-2 border-pink-light hover:border-pink-mid hover:shadow-lg transition-all hover:-translate-y-1 relative animate-fade-in-up"
-                  style={{ animationDelay: `${i * 80}ms` }}
-                >
-                  {p.hot && (
-                    <div className="absolute top-2 left-2 bg-orange-500 text-white text-xs font-bold px-2 py-1 rounded-full z-10 flex items-center gap-1">
-                      🔥 Hot
-                    </div>
-                  )}
-                  {p.image ? (
-                    <div className="relative w-full h-48 overflow-hidden">
-                      <Image
-                        src={p.image}
-                        alt={p.name}
-                        fill
-                        unoptimized
-                        sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, 33vw"
-                        className="object-cover transition-transform duration-300 hover:scale-110"
-                      />
-                    </div>
-                  ) : (
-                    <div className="w-full h-48 bg-peach flex items-center justify-center text-4xl">🍡</div>
-                  )}
-                  <div className="p-4">
-                    <h2 className="font-bold text-lg text-chocolate">{p.name}</h2>
-                    {p.description && <p className="text-sm text-caramel mt-1 line-clamp-2">{p.description}</p>}
-                    <div className="flex items-center justify-between mt-3 gap-4">
-                      <span className="text-pink-bold font-bold text-lg">${p.price.toFixed(2)}</span>
-                      {lowStock ? (
-                        <span className="text-xs font-bold text-pink-bold bg-pink-light px-2 py-0.5 rounded-full">
-                          Only {p.quantity} left!
-                        </span>
-                      ) : (
-                        <span className="text-xs text-caramel">{p.quantity} left</span>
-                      )}
-                    </div>
-                    <button
-                      onClick={() => handleAdd(p)}
-                      disabled={atMax}
-                      className={`mt-3 w-full py-2 rounded-full font-semibold transition-all active:scale-95 focus:outline-none focus:ring-2 focus:ring-pink-bold/40 ${
-                        justAdded
-                          ? "bg-mint-bold text-white scale-[1.02]"
-                          : atMax
-                            ? "bg-caramel/30 text-caramel cursor-not-allowed"
-                            : "bg-pink-bold text-white hover:bg-pink-mid"
-                      }`}
-                    >
-                      {justAdded ? "Added!" : atMax ? `Max in cart (${inCart})` : "Add to Cart"}
-                    </button>
-                  </div>
-                </div>
-              );
-            })}
-
+            {inStock.map((p, i) => (
+              <ProductCard
+                key={p.id}
+                product={p}
+                variant="in-stock"
+                index={i}
+                inCart={items.find((it) => it.productId === p.id)?.quantity ?? 0}
+                justAdded={addedIds.has(p.id)}
+                onAdd={handleAdd}
+              />
+            ))}
             {soldOut.map((p) => (
-              <div
-                key={p.id}
-                className="bg-white rounded-2xl shadow-sm overflow-hidden border-2 border-pink-light/40 opacity-60"
-              >
-                {p.image ? (
-                  <div className="relative w-full h-48">
-                    <Image
-                      src={p.image}
-                      alt={p.name}
-                      fill
-                      unoptimized
-                      sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, 33vw"
-                      className="object-cover grayscale"
-                    />
-                  </div>
-                ) : (
-                  <div className="w-full h-48 bg-peach/50 flex items-center justify-center text-4xl grayscale">🍡</div>
-                )}
-                <div className="p-4">
-                  <h2 className="font-bold text-lg text-chocolate/60">{p.name}</h2>
-                  {p.description && <p className="text-sm text-caramel/60 mt-1 line-clamp-2">{p.description}</p>}
-                  <div className="flex items-center justify-between mt-3">
-                    <span className="text-pink-bold/60 font-bold text-lg">${p.price.toFixed(2)}</span>
-                    <span className="text-xs font-semibold text-caramel/60">Sold out</span>
-                  </div>
-                  <div className="mt-3 w-full bg-caramel/20 text-caramel/60 py-2 rounded-full font-semibold text-center text-sm">
-                    Sold Out
-                  </div>
-                </div>
-              </div>
+              <ProductCard key={p.id} product={p} variant="sold-out" />
             ))}
-
             {unavailable.map((p) => (
-              <div
-                key={p.id}
-                className="bg-white rounded-2xl shadow-sm overflow-hidden border-2 border-yellow-200/60 opacity-50"
-              >
-                {p.image ? (
-                  <div className="relative w-full h-48">
-                    <Image
-                      src={p.image}
-                      alt={p.name}
-                      fill
-                      unoptimized
-                      sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, 33vw"
-                      className="object-cover grayscale"
-                    />
-                  </div>
-                ) : (
-                  <div className="w-full h-48 bg-yellow-50 flex items-center justify-center text-4xl">❓</div>
-                )}
-                <div className="p-4">
-                  <h2 className="font-bold text-lg text-chocolate/50">{p.name}</h2>
-                  {p.description && <p className="text-sm text-caramel/50 mt-1 line-clamp-2">{p.description}</p>}
-                  <div className="flex items-center justify-between mt-3">
-                    <span className="text-pink-bold/50 font-bold text-lg">${p.price.toFixed(2)}</span>
-                  </div>
-                  <div className="mt-3 w-full bg-yellow-100 text-yellow-700 py-2 rounded-full font-semibold text-center text-sm">
-                    Temporarily Unavailable
-                  </div>
-                </div>
-              </div>
+              <ProductCard key={p.id} product={p} variant="unavailable" />
             ))}
-
             {comingSoon.map((p) => (
-              <div
-                key={p.id}
-                className="bg-white rounded-2xl shadow-sm overflow-hidden border-2 border-purple-200/60"
-              >
-                {p.image ? (
-                  <div className="relative w-full h-48">
-                    <Image
-                      src={p.image}
-                      alt={p.name}
-                      fill
-                      unoptimized
-                      sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, 33vw"
-                      className="object-cover opacity-70"
-                    />
-                    <div className="absolute top-2 left-2 bg-purple-600 text-white text-xs font-bold px-2 py-1 rounded-full">
-                      🔜 Coming Soon
-                    </div>
-                  </div>
-                ) : (
-                  <div className="w-full h-48 bg-purple-50 flex flex-col items-center justify-center gap-2">
-                    <span className="text-4xl">🔜</span>
-                    <span className="text-xs font-bold text-purple-500">Coming Soon</span>
-                  </div>
-                )}
-                <div className="p-4">
-                  <h2 className="font-bold text-lg text-chocolate">{p.name}</h2>
-                  {p.description && <p className="text-sm text-caramel mt-1 line-clamp-2">{p.description}</p>}
-                  <div className="flex items-center justify-between mt-3">
-                    <span className="text-pink-bold font-bold text-lg">${p.price.toFixed(2)}</span>
-                  </div>
-                  <div className="mt-3 w-full bg-purple-100 text-purple-700 py-2 rounded-full font-semibold text-center text-sm">
-                    Coming Soon
-                  </div>
-                </div>
-              </div>
+              <ProductCard key={p.id} product={p} variant="coming-soon" />
             ))}
           </div>
         )}
@@ -292,8 +148,9 @@ export default function Storefront({ initialProducts }: { initialProducts: Produ
                 <form onSubmit={handleRequestSubmit} className="space-y-3">
                   <h3 className="font-bold text-chocolate text-lg">Request an Item</h3>
                   <div>
-                    <label className="block text-xs font-semibold text-caramel mb-1">Your Name</label>
+                    <label htmlFor="req-name" className="block text-xs font-semibold text-caramel mb-1">Your Name</label>
                     <input
+                      id="req-name"
                       type="text"
                       required
                       value={requestForm.name}
@@ -303,8 +160,9 @@ export default function Storefront({ initialProducts }: { initialProducts: Produ
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold text-caramel mb-1">Email</label>
+                    <label htmlFor="req-email" className="block text-xs font-semibold text-caramel mb-1">Email</label>
                     <input
+                      id="req-email"
                       type="email"
                       required
                       value={requestForm.email}
@@ -314,8 +172,9 @@ export default function Storefront({ initialProducts }: { initialProducts: Produ
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold text-caramel mb-1">What do you want?</label>
+                    <label htmlFor="req-item" className="block text-xs font-semibold text-caramel mb-1">What do you want?</label>
                     <input
+                      id="req-item"
                       type="text"
                       required
                       value={requestForm.item}
@@ -325,8 +184,9 @@ export default function Storefront({ initialProducts }: { initialProducts: Produ
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold text-caramel mb-1">Anything else? (optional)</label>
+                    <label htmlFor="req-note" className="block text-xs font-semibold text-caramel mb-1">Anything else? (optional)</label>
                     <textarea
+                      id="req-note"
                       value={requestForm.note}
                       onChange={(e) => setRequestForm((f) => ({ ...f, note: e.target.value }))}
                       className="w-full border-2 border-pink-light rounded-lg px-3 py-2 text-sm focus:border-pink-bold focus:outline-none focus:ring-2 focus:ring-pink-bold/30"
@@ -334,7 +194,7 @@ export default function Storefront({ initialProducts }: { initialProducts: Produ
                       placeholder="How much would you pay? Any other notes?"
                     />
                   </div>
-                  {requestError && <p className="text-sm text-pink-bold">{requestError}</p>}
+                  {requestError && <p role="alert" className="text-sm text-pink-bold">{requestError}</p>}
                   <button
                     type="submit"
                     disabled={submittingRequest}

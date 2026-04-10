@@ -21,6 +21,26 @@ const empty: Omit<Product, "id"> = {
   comingSoon: false,
 };
 
+type RestockSummary = {
+  oldQty: number;
+  oldCost: number;
+  newQty: number;
+  newCost: number;
+  quantityAdded: number;
+  batchCost: number;
+  costDelta: number;
+};
+
+// Shared class tokens — keep styling consistent and the JSX readable.
+const inputClass =
+  "w-full border border-pink-light rounded-lg px-3 py-2 bg-white focus:border-pink-bold focus:outline-none focus:ring-2 focus:ring-pink-bold/30";
+const labelClass = "block text-xs font-semibold uppercase tracking-wide text-caramel/80 mb-1";
+const cardClass = "bg-white rounded-xl border border-pink-light";
+const chipBase =
+  "text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full border";
+const chipAttention = `${chipBase} bg-pink-light/60 text-pink-bold border-pink-mid/40`;
+const chipNeutral = `${chipBase} bg-peach text-caramel border-caramel/25`;
+
 export default function InventoryPage() {
   const admin = useAdminData({ products: true });
   const [form, setForm] = useState(empty);
@@ -28,6 +48,13 @@ export default function InventoryPage() {
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [localError, setLocalError] = useState<string | null>(null);
+
+  // Restock modal state
+  const [restockId, setRestockId] = useState<string | null>(null);
+  const [restockQty, setRestockQty] = useState("");
+  const [restockCost, setRestockCost] = useState("");
+  const [restocking, setRestocking] = useState(false);
+  const [restockSummary, setRestockSummary] = useState<RestockSummary | null>(null);
 
   const session = admin.session;
   const error = localError ?? admin.error;
@@ -92,7 +119,7 @@ export default function InventoryPage() {
   }
 
   async function handleDelete(id: string) {
-    if (!confirm("Delete this item?")) return;
+    if (!confirm("Delete this item? This can't be undone.")) return;
 
     setError(null);
     const res = await fetch("/api/products", {
@@ -107,29 +134,64 @@ export default function InventoryPage() {
       return;
     }
 
+    setEditId(null);
+    setForm(empty);
     await load().catch((err) => {
       setError(err instanceof Error ? err.message : "Could not load inventory.");
     });
   }
 
-  async function toggleHot(p: Product) {
+  function openRestock(p: Product) {
+    setRestockId(p.id);
+    setRestockQty("");
+    setRestockCost("");
+    setRestockSummary(null);
     setError(null);
-    const res = await fetch("/api/products", {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...p, hot: !p.hot }),
-    });
-    const data = (await res.json().catch(() => null)) as { error?: string } | null;
+  }
 
-    if (!res.ok) {
-      setError(data?.error ?? "Could not update item.");
+  function closeRestock() {
+    setRestockId(null);
+    setRestockQty("");
+    setRestockCost("");
+    setRestockSummary(null);
+  }
+
+  async function submitRestock() {
+    if (!restockId) return;
+    const qty = parseInt(restockQty, 10);
+    const cost = parseFloat(restockCost);
+    if (!Number.isInteger(qty) || qty < 1) {
+      setError("How many did you add? Use a whole number of 1 or more.");
       return;
     }
-
-    await load().catch((err) => {
-      setError(err instanceof Error ? err.message : "Could not load inventory.");
-    });
+    if (!Number.isFinite(cost) || cost < 0) {
+      setError("Batch cost must be 0 or more.");
+      return;
+    }
+    setRestocking(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/products/restock", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: restockId, quantityAdded: qty, batchCost: cost }),
+      });
+      const data = (await res.json().catch(() => null)) as
+        | { summary?: RestockSummary; error?: string }
+        | null;
+      if (!res.ok || !data?.summary) {
+        throw new Error(data?.error ?? "Could not restock.");
+      }
+      setRestockSummary(data.summary);
+      await load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not restock.");
+    } finally {
+      setRestocking(false);
+    }
   }
+
+  const restockProduct = products.find((p) => p.id === restockId);
 
   function startEdit(p: Product) {
     setEditId(p.id);
@@ -148,6 +210,11 @@ export default function InventoryPage() {
     });
   }
 
+  const profitPct =
+    form.cost > 0 && form.price > 0
+      ? Math.round(((form.price - form.cost) / form.cost) * 100)
+      : null;
+
   return (
     <div className="min-h-screen bg-peach/30">
       <nav className="bg-chocolate text-white px-6 py-3 flex items-center justify-between gap-4">
@@ -159,168 +226,321 @@ export default function InventoryPage() {
         </div>
         <AdminLogoutButton />
       </nav>
-      <main className="max-w-3xl mx-auto px-4 py-8">
+
+      {/* Restock modal */}
+      {restockId && restockProduct && (
+        <div className="fixed inset-0 bg-chocolate/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl p-6 max-w-md w-full border border-pink-light shadow-2xl">
+            {restockSummary ? (
+              <div className="animate-bounce-in">
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="text-mint-bold text-xl">✓</span>
+                  <h2 className="text-xl font-bold text-chocolate">Restocked</h2>
+                </div>
+                <p className="text-sm text-caramel mb-5">
+                  Added <strong className="text-chocolate">{restockSummary.quantityAdded}</strong> of{" "}
+                  <strong className="text-chocolate">{restockProduct.name}</strong> for{" "}
+                  <strong className="text-chocolate">${restockSummary.batchCost.toFixed(2)}</strong>.
+                </p>
+
+                <dl className="border-y border-pink-light/60 py-4 mb-4 space-y-2 text-sm">
+                  <div className="flex justify-between items-baseline">
+                    <dt className="text-caramel">In stock</dt>
+                    <dd className="font-semibold text-chocolate tabular-nums">
+                      <span className="text-caramel">{restockSummary.oldQty}</span>
+                      <span className="text-caramel/40 mx-1.5">→</span>
+                      {restockSummary.newQty}
+                    </dd>
+                  </div>
+                  <div className="flex justify-between items-baseline">
+                    <dt className="text-caramel">Unit cost</dt>
+                    <dd className="font-semibold text-chocolate tabular-nums">
+                      <span className="text-caramel">${restockSummary.oldCost.toFixed(2)}</span>
+                      <span className="text-caramel/40 mx-1.5">→</span>
+                      ${restockSummary.newCost.toFixed(2)}
+                      {restockSummary.costDelta !== 0 && (
+                        <span
+                          className={`ml-2 text-xs font-normal ${
+                            restockSummary.costDelta < 0 ? "text-mint-bold" : "text-pink-bold"
+                          }`}
+                        >
+                          {restockSummary.costDelta > 0 ? "+" : ""}${restockSummary.costDelta.toFixed(2)}
+                        </span>
+                      )}
+                    </dd>
+                  </div>
+                </dl>
+
+                <p className="text-xs text-caramel leading-relaxed mb-5">
+                  Your new unit cost blends the old stock and the new batch together. That&apos;s
+                  the number you&apos;ll use to figure out profit on the next sale.
+                </p>
+
+                <button
+                  onClick={closeRestock}
+                  className="w-full bg-mint-bold text-white py-2.5 rounded-full font-bold hover:bg-mint-bold/90 active:scale-[0.98] transition-all"
+                >
+                  Done
+                </button>
+              </div>
+            ) : (
+              <>
+                <h2 className="text-xl font-bold text-chocolate mb-1">Restock</h2>
+                <p className="text-sm text-caramel mb-5">
+                  <strong className="text-chocolate">{restockProduct.name}</strong> —{" "}
+                  <span className="tabular-nums">{restockProduct.quantity}</span> in stock at{" "}
+                  <span className="tabular-nums">${(restockProduct.cost || 0).toFixed(2)}</span> each.
+                </p>
+                <div className="space-y-4 mb-5">
+                  <div>
+                    <label className={labelClass}>How many did you add?</label>
+                    <input
+                      type="number"
+                      min="1"
+                      inputMode="numeric"
+                      value={restockQty}
+                      onChange={(e) => setRestockQty(e.target.value)}
+                      placeholder="e.g. 12"
+                      autoFocus
+                      className={`${inputClass} tabular-nums`}
+                    />
+                  </div>
+                  <div>
+                    <label className={labelClass}>What did the whole batch cost?</label>
+                    <div className="relative">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-caramel/70 font-semibold">$</span>
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        inputMode="decimal"
+                        value={restockCost}
+                        onChange={(e) => setRestockCost(e.target.value)}
+                        placeholder="6.00"
+                        className={`${inputClass} pl-7 tabular-nums`}
+                      />
+                    </div>
+                    {restockQty && restockCost && parseInt(restockQty, 10) > 0 && parseFloat(restockCost) >= 0 && (
+                      <p className="text-xs text-caramel mt-1.5">
+                        That&apos;s{" "}
+                        <strong className="text-chocolate tabular-nums">
+                          ${(parseFloat(restockCost) / parseInt(restockQty, 10)).toFixed(2)}
+                        </strong>{" "}
+                        per unit for this batch.
+                      </p>
+                    )}
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={submitRestock}
+                    disabled={restocking || !restockQty || !restockCost}
+                    className="flex-1 bg-mint-bold text-white py-2.5 rounded-full font-bold hover:bg-mint-bold/90 active:scale-[0.98] transition-all disabled:opacity-50 disabled:active:scale-100"
+                  >
+                    {restocking ? "Saving..." : "Add to Inventory"}
+                  </button>
+                  <button
+                    onClick={closeRestock}
+                    className="px-4 text-caramel hover:text-chocolate transition-colors"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
+      <main className="max-w-3xl mx-auto px-4 py-8 space-y-8">
         {error && (
-          <div className="bg-white rounded-xl p-4 border-2 border-pink-bold/30 text-pink-bold mb-6">
+          <div
+            role="alert"
+            className="bg-white rounded-xl p-4 border border-pink-bold/30 text-pink-bold"
+          >
             {error}
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="bg-white rounded-xl p-6 border-2 border-pink-light mb-8 space-y-4">
-          <h2 className="text-xl font-bold text-chocolate">{editId ? "Edit Item" : "Add New Item"}</h2>
+        {/* Add / Edit form */}
+        <form onSubmit={handleSubmit} className={`${cardClass} p-6 space-y-5`}>
+          <div className="flex items-center justify-between gap-4">
+            <h2 className="text-xl font-bold text-chocolate">
+              {editId ? "Edit Item" : "Add New Item"}
+            </h2>
+            {editId && (
+              <button
+                type="button"
+                onClick={() => handleDelete(editId)}
+                className="text-xs font-semibold text-caramel hover:text-pink-bold transition-colors"
+              >
+                Delete this item
+              </button>
+            )}
+          </div>
+
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-semibold text-caramel mb-1">Name</label>
+              <label className={labelClass}>Name</label>
               <input
                 type="text"
                 required
                 value={form.name}
                 onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-                className="w-full border-2 border-pink-light rounded-lg px-3 py-2 focus:border-pink-bold focus:outline-none focus:ring-2 focus:ring-pink-bold/30"
+                className={inputClass}
               />
             </div>
             <div>
-              <label className="block text-sm font-semibold text-caramel mb-1">Cost ($)</label>
-              <input
-                type="number"
-                required
-                min="0"
-                step="0.01"
-                value={form.cost || ""}
-                onChange={(e) => setForm((f) => ({ ...f, cost: parseFloat(e.target.value) || 0 }))}
-                className="w-full border-2 border-pink-light rounded-lg px-3 py-2 focus:border-pink-bold focus:outline-none focus:ring-2 focus:ring-pink-bold/30"
-                placeholder="What you paid"
-              />
+              <label className={labelClass}>Cost</label>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-caramel/70 font-semibold">$</span>
+                <input
+                  type="number"
+                  required
+                  min="0"
+                  step="0.01"
+                  value={form.cost || ""}
+                  onChange={(e) => setForm((f) => ({ ...f, cost: parseFloat(e.target.value) || 0 }))}
+                  className={`${inputClass} pl-7 tabular-nums`}
+                  placeholder="What you paid"
+                />
+              </div>
             </div>
           </div>
+
           <div className="grid grid-cols-3 gap-4">
             <div>
-              <label className="block text-sm font-semibold text-caramel mb-1">Sell Price ($)</label>
-              <input
-                type="number"
-                required
-                min="0"
-                step="0.01"
-                value={form.price || ""}
-                onChange={(e) => setForm((f) => ({ ...f, price: parseFloat(e.target.value) || 0 }))}
-                className="w-full border-2 border-pink-light rounded-lg px-3 py-2 focus:border-pink-bold focus:outline-none focus:ring-2 focus:ring-pink-bold/30"
-                placeholder="What you charge"
-              />
-            </div>
-            {form.cost > 0 && form.price > 0 && (
-              <div className="flex items-end pb-2">
-                <span className={`text-sm font-bold ${form.price > form.cost ? "text-mint-bold" : "text-pink-bold"}`}>
-                  Profit: ${(form.price - form.cost).toFixed(2)} ({Math.round(((form.price - form.cost) / form.cost) * 100)}%)
-                </span>
+              <label className={labelClass}>Sell Price</label>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-caramel/70 font-semibold">$</span>
+                <input
+                  type="number"
+                  required
+                  min="0"
+                  step="0.01"
+                  value={form.price || ""}
+                  onChange={(e) => setForm((f) => ({ ...f, price: parseFloat(e.target.value) || 0 }))}
+                  className={`${inputClass} pl-7 tabular-nums`}
+                  placeholder="What you charge"
+                />
               </div>
-            )}
+            </div>
+            <div className="flex items-end pb-2">
+              {profitPct !== null && (
+                <div className="text-sm leading-tight">
+                  <p className="text-[10px] font-semibold uppercase tracking-wide text-caramel/80">Profit</p>
+                  <p className={`font-bold tabular-nums ${form.price > form.cost ? "text-mint-bold" : "text-pink-bold"}`}>
+                    ${(form.price - form.cost).toFixed(2)}
+                    <span className="text-xs font-semibold ml-1">{profitPct}%</span>
+                  </p>
+                </div>
+              )}
+            </div>
             <div>
-              <label className="block text-sm font-semibold text-caramel mb-1">Quantity</label>
+              <label className={labelClass}>Quantity</label>
               <input
                 type="number"
                 required
                 min="0"
                 value={form.quantity}
                 onChange={(e) => setForm((f) => ({ ...f, quantity: Math.max(0, parseInt(e.target.value, 10) || 0) }))}
-                className="w-full border-2 border-pink-light rounded-lg px-3 py-2 focus:border-pink-bold focus:outline-none focus:ring-2 focus:ring-pink-bold/30"
+                className={`${inputClass} tabular-nums`}
               />
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-4">
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
             <div>
-              <label className="block text-sm font-semibold text-caramel mb-1">Image</label>
-              <input type="file" accept="image/*" onChange={handleUpload} className="w-full text-sm text-caramel" />
-              {uploading && <p className="text-xs text-pink-bold mt-1">Uploading...</p>}
-              {form.image && (
-                <Image
-                  src={form.image}
-                  alt="preview"
-                  width={64}
-                  height={64}
-                  unoptimized
-                  className="mt-2 h-16 w-16 rounded-lg object-cover"
-                />
-              )}
-            </div>
-            <div className="flex flex-col gap-2 pt-6">
+              <label className={labelClass}>Photo</label>
               <div className="flex items-center gap-3">
-                <input
-                  type="checkbox"
-                  id="hot-flag"
-                  checked={form.hot ?? false}
-                  onChange={(e) => setForm((f) => ({ ...f, hot: e.target.checked }))}
-                  className="w-5 h-5 accent-pink-bold cursor-pointer"
-                />
-                <label htmlFor="hot-flag" className="font-semibold text-chocolate cursor-pointer">
-                  🔥 Hot / Selling Fast
-                </label>
-              </div>
-              <div className="flex items-center gap-3">
-                <input
-                  type="checkbox"
-                  id="coming-soon-flag"
-                  checked={form.comingSoon ?? false}
-                  onChange={(e) => setForm((f) => ({ ...f, comingSoon: e.target.checked }))}
-                  className="w-5 h-5 accent-purple-500 cursor-pointer"
-                />
-                <label htmlFor="coming-soon-flag" className="font-semibold text-purple-700 cursor-pointer">
-                  🔜 Coming Soon
-                </label>
-              </div>
-              <div className="flex items-center gap-3">
-                <input
-                  type="checkbox"
-                  id="missing-flag"
-                  checked={form.missing ?? false}
-                  onChange={(e) => setForm((f) => ({ ...f, missing: e.target.checked }))}
-                  className="w-5 h-5 accent-caramel cursor-pointer"
-                />
-                <label htmlFor="missing-flag" className="font-semibold text-caramel cursor-pointer">
-                  ❓ Can&apos;t Find / Missing Stock
-                </label>
-              </div>
-              <div className="flex items-center gap-3 flex-wrap">
-                <input
-                  type="checkbox"
-                  id="stolen-flag"
-                  checked={form.stolen ?? false}
-                  onChange={(e) => setForm((f) => ({ ...f, stolen: e.target.checked }))}
-                  className="w-5 h-5 accent-red-500 cursor-pointer"
-                />
-                <label htmlFor="stolen-flag" className="font-semibold text-red-600 cursor-pointer">
-                  🚨 Items Stolen
-                </label>
-                {form.stolen && (
-                  <div className="flex items-center gap-2 ml-2">
-                    <label className="text-xs text-caramel font-semibold">Units stolen:</label>
-                    <input
-                      type="number"
-                      min="0"
-                      max="999"
-                      value={form.stolenQty || ""}
-                      onChange={(e) => setForm((f) => ({ ...f, stolenQty: parseInt(e.target.value, 10) || 0 }))}
-                      className="w-16 border-2 border-red-200 rounded-lg px-2 py-1 text-center font-bold focus:border-red-400 focus:outline-none focus:ring-2 focus:ring-red-300/30 text-sm"
-                      placeholder="0"
-                    />
+                {form.image ? (
+                  <Image
+                    src={form.image}
+                    alt="preview"
+                    width={64}
+                    height={64}
+                    unoptimized
+                    className="h-16 w-16 rounded-lg object-cover border border-pink-light"
+                  />
+                ) : (
+                  <div className="h-16 w-16 rounded-lg bg-peach border border-pink-light flex items-center justify-center text-2xl">
+                    🍡
                   </div>
                 )}
+                <label className="flex-1 text-xs text-caramel cursor-pointer hover:text-chocolate transition-colors">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    capture="environment"
+                    onChange={handleUpload}
+                    className="hidden"
+                  />
+                  <span className="inline-block px-3 py-2 rounded-lg border border-pink-light bg-white hover:bg-peach/60 transition-colors font-semibold">
+                    {uploading ? "Uploading..." : form.image ? "Change photo" : "Take / choose photo"}
+                  </span>
+                </label>
               </div>
             </div>
+            <div>
+              <p className={labelClass}>Flags</p>
+              <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+                <FlagCheckbox
+                  id="hot-flag"
+                  label="🔥 Hot"
+                  checked={form.hot ?? false}
+                  onChange={(v) => setForm((f) => ({ ...f, hot: v }))}
+                />
+                <FlagCheckbox
+                  id="coming-soon-flag"
+                  label="🔜 Coming soon"
+                  checked={form.comingSoon ?? false}
+                  onChange={(v) => setForm((f) => ({ ...f, comingSoon: v }))}
+                />
+                <FlagCheckbox
+                  id="missing-flag"
+                  label="❓ Missing"
+                  checked={form.missing ?? false}
+                  onChange={(v) => setForm((f) => ({ ...f, missing: v }))}
+                />
+                <FlagCheckbox
+                  id="stolen-flag"
+                  label="🚨 Stolen"
+                  checked={form.stolen ?? false}
+                  onChange={(v) => setForm((f) => ({ ...f, stolen: v }))}
+                />
+              </div>
+              {form.stolen && (
+                <div className="mt-3 flex items-center gap-2 text-xs">
+                  <label className="font-semibold text-caramel">Units lost</label>
+                  <input
+                    type="number"
+                    min="0"
+                    max="999"
+                    value={form.stolenQty || ""}
+                    onChange={(e) => setForm((f) => ({ ...f, stolenQty: parseInt(e.target.value, 10) || 0 }))}
+                    className="w-16 border border-pink-light rounded-lg px-2 py-1 text-center font-bold tabular-nums focus:border-pink-bold focus:outline-none focus:ring-2 focus:ring-pink-bold/30"
+                    placeholder="0"
+                  />
+                </div>
+              )}
+            </div>
           </div>
+
           <div>
-            <label className="block text-sm font-semibold text-caramel mb-1">Description</label>
+            <label className={labelClass}>Description</label>
             <textarea
               value={form.description}
               onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
-              className="w-full border-2 border-pink-light rounded-lg px-3 py-2 focus:border-pink-bold focus:outline-none focus:ring-2 focus:ring-pink-bold/30"
+              className={inputClass}
               rows={2}
             />
           </div>
-          <div className="flex gap-2">
+
+          <div className="flex gap-2 pt-1">
             <button
               type="submit"
               disabled={saving || uploading}
-              className="bg-pink-bold text-white px-6 py-2 rounded-full font-semibold hover:bg-pink-mid transition-colors disabled:opacity-60"
+              className="bg-pink-bold text-white px-6 py-2.5 rounded-full font-bold hover:bg-pink-mid active:scale-[0.98] transition-all disabled:opacity-50 disabled:active:scale-100"
             >
               {saving ? "Saving..." : editId ? "Save Changes" : "Add Item"}
             </button>
@@ -340,106 +560,142 @@ export default function InventoryPage() {
           </div>
         </form>
 
-        <h2 className="text-xl font-bold text-chocolate mb-4">
-          {isOwner ? `All Inventory (${products.length} items)` : `Your Inventory (${products.length} items)`}
-        </h2>
-        {products.length === 0 ? (
-          <p className="text-caramel">No products yet. Add one above!</p>
-        ) : (
-          <div className="space-y-3">
-            {products.map((p) => (
-              <div key={p.id} className="bg-white rounded-xl p-4 flex items-center gap-4 border-2 border-pink-light">
-                {p.image ? (
-                  <Image
-                    src={p.image}
-                    alt={p.name}
-                    width={64}
-                    height={64}
-                    unoptimized
-                    className="w-16 h-16 rounded-lg object-cover"
-                  />
-                ) : (
-                  <div className="w-16 h-16 rounded-lg bg-peach flex items-center justify-center text-2xl">🍡</div>
-                )}
-                <div className="flex-1">
-                  <h3 className="font-bold text-chocolate flex items-center gap-1 flex-wrap">
-                    {p.name}
-                    {p.hot && <span title="Hot item">🔥</span>}
-                    {p.stolen && <span className="text-xs bg-red-100 text-red-700 border border-red-300 px-1.5 py-0.5 rounded-full">🚨 Stolen{p.stolenQty ? ` (${p.stolenQty})` : ""}</span>}
-                    {p.missing && !p.stolen && <span className="text-xs bg-yellow-100 text-yellow-700 border border-yellow-300 px-1.5 py-0.5 rounded-full">❓ Missing</span>}
-                    {p.comingSoon && <span className="text-xs bg-purple-100 text-purple-700 border border-purple-300 px-1.5 py-0.5 rounded-full">🔜 Coming Soon</span>}
-                    {p.quantity === 0 && !p.missing && !p.stolen && !p.comingSoon && <span className="text-xs bg-gray-100 text-gray-500 border border-gray-200 px-1.5 py-0.5 rounded-full">Sold Out</span>}
-                  </h3>
-                  <p className="text-sm text-caramel">
-                    Cost ${(p.cost || 0).toFixed(2)} → Sell ${p.price.toFixed(2)}
-                    {p.cost > 0 && (
-                      <span className="text-mint-bold font-semibold ml-1">
-                        (+${(p.price - p.cost).toFixed(2)} profit)
-                      </span>
-                    )}
-                    {" · "}
-                    <span className={p.quantity === 0 ? "text-pink-bold font-semibold" : ""}>{p.quantity} in stock</span>
-                    {p.stolen && p.stolenQty ? (
-                      <span className="text-red-600 font-semibold ml-1">
-                        · lost ${((p.stolenQty) * (p.price)).toFixed(2)} to theft
-                      </span>
-                    ) : null}
-                  </p>
-                </div>
-                <button
-                  onClick={() => toggleHot(p)}
-                  className={`text-sm px-3 py-1 rounded-full font-semibold transition-colors border ${
-                    p.hot
-                      ? "bg-orange-100 text-orange-600 border-orange-300 hover:bg-orange-200"
-                      : "bg-white text-caramel border-caramel/30 hover:bg-peach"
-                  }`}
-                >
-                  {p.hot ? "🔥 Hot" : "Mark Hot"}
-                </button>
-                <button
-                  onClick={() => {
-                    setError(null);
-                    fetch("/api/products", {
-                      method: "PUT",
-                      headers: { "Content-Type": "application/json" },
-                      body: JSON.stringify({ ...p, missing: !p.missing }),
-                    })
-                      .then(async (res) => {
-                        if (!res.ok) {
-                          const data = (await res.json().catch(() => null)) as { error?: string } | null;
-                          throw new Error(data?.error ?? "Could not update item.");
-                        }
-                        await load();
-                      })
-                      .catch((err) => {
-                        setError(err instanceof Error ? err.message : "Could not update item.");
-                      });
-                  }}
-                  className={`text-sm px-3 py-1 rounded-full font-semibold transition-colors border ${
-                    p.missing
-                      ? "bg-yellow-100 text-yellow-700 border-yellow-300 hover:bg-yellow-200"
-                      : "bg-white text-caramel border-caramel/30 hover:bg-yellow-50"
-                  }`}
-                >
-                  {p.missing ? "❓ Missing" : "Mark Missing"}
-                </button>
-                <button
-                  onClick={() => startEdit(p)}
-                  className="text-sm bg-pink-light text-pink-bold px-3 py-1 rounded-full font-semibold hover:bg-pink-mid hover:text-white transition-colors"
-                >
-                  Edit
-                </button>
-                <button
-                  onClick={() => handleDelete(p.id)}
-                  className="text-sm text-caramel hover:text-pink-bold transition-colors"
-                >
-                  Delete
-                </button>
-              </div>
-            ))}
-          </div>
-        )}
+        {/* List */}
+        <section>
+          <h2 className="text-xl font-bold text-chocolate mb-4">
+            {isOwner ? "All Inventory" : "Your Inventory"}
+            <span className="ml-2 text-sm font-semibold text-caramel tabular-nums">
+              ({products.length})
+            </span>
+          </h2>
+          {products.length === 0 ? (
+            <p className="text-caramel">No products yet. Add one above!</p>
+          ) : (
+            <div className="space-y-3">
+              {products.map((p) => (
+                <ProductRow
+                  key={p.id}
+                  product={p}
+                  isEditing={editId === p.id}
+                  onRestock={() => openRestock(p)}
+                  onEdit={() => startEdit(p)}
+                />
+              ))}
+            </div>
+          )}
+        </section>
       </main>
+    </div>
+  );
+}
+
+function FlagCheckbox({
+  id,
+  label,
+  checked,
+  onChange,
+}: {
+  id: string;
+  label: string;
+  checked: boolean;
+  onChange: (v: boolean) => void;
+}) {
+  return (
+    <label htmlFor={id} className="flex items-center gap-2 cursor-pointer text-chocolate font-semibold">
+      <input
+        type="checkbox"
+        id={id}
+        checked={checked}
+        onChange={(e) => onChange(e.target.checked)}
+        className="w-4 h-4 accent-pink-bold cursor-pointer"
+      />
+      {label}
+    </label>
+  );
+}
+
+function ProductRow({
+  product: p,
+  isEditing,
+  onRestock,
+  onEdit,
+}: {
+  product: Product;
+  isEditing: boolean;
+  onRestock: () => void;
+  onEdit: () => void;
+}) {
+  const profit = p.price - (p.cost || 0);
+  const lowStock = p.quantity > 0 && p.quantity <= 3;
+  const soldOut = p.quantity === 0 && !p.missing && !p.stolen && !p.comingSoon;
+
+  return (
+    <div
+      className={`bg-white rounded-xl border p-4 flex gap-4 transition-colors ${
+        isEditing ? "border-pink-bold/40 ring-2 ring-pink-bold/20" : "border-pink-light"
+      }`}
+    >
+      {p.image ? (
+        <Image
+          src={p.image}
+          alt={p.name}
+          width={64}
+          height={64}
+          unoptimized
+          className="w-16 h-16 rounded-lg object-cover shrink-0 border border-pink-light"
+        />
+      ) : (
+        <div className="w-16 h-16 rounded-lg bg-peach flex items-center justify-center text-2xl shrink-0 border border-pink-light">
+          🍡
+        </div>
+      )}
+
+      <div className="flex-1 min-w-0 flex flex-col gap-3">
+        <div>
+          <h3 className="font-bold text-chocolate flex items-center gap-1.5 flex-wrap leading-tight">
+            <span className="truncate">{p.name}</span>
+            {p.hot && <span aria-label="Hot item">🔥</span>}
+            {p.stolen && (
+              <span className={chipAttention}>
+                Stolen{p.stolenQty ? ` · ${p.stolenQty}` : ""}
+              </span>
+            )}
+            {p.missing && !p.stolen && <span className={chipNeutral}>Missing</span>}
+            {p.comingSoon && <span className={chipNeutral}>Coming soon</span>}
+            {soldOut && <span className={chipNeutral}>Sold out</span>}
+          </h3>
+
+          <p className="text-sm text-caramel mt-1 tabular-nums">
+            <span className="text-caramel/70">cost</span> ${(p.cost || 0).toFixed(2)}
+            <span className="text-caramel/40 mx-1">/</span>
+            <span className="text-caramel/70">sell</span> ${p.price.toFixed(2)}
+            {p.cost > 0 && (
+              <span className="text-mint-bold font-semibold ml-1.5">
+                +${profit.toFixed(2)}
+              </span>
+            )}
+            <span className="text-caramel/40 mx-1.5">·</span>
+            <span className={lowStock ? "text-pink-bold font-semibold" : soldOut ? "text-pink-bold font-semibold" : ""}>
+              {p.quantity} in stock
+            </span>
+          </p>
+        </div>
+
+        <div className="flex gap-2 flex-wrap">
+          <button
+            onClick={onRestock}
+            className="px-4 py-1.5 rounded-full text-sm font-bold bg-mint-bold text-white hover:bg-mint-bold/90 active:scale-[0.97] transition-all"
+          >
+            + Restock
+          </button>
+          <button
+            onClick={onEdit}
+            className="px-4 py-1.5 rounded-full text-sm font-semibold bg-pink-light text-pink-bold hover:bg-pink-mid hover:text-white active:scale-[0.97] transition-all"
+          >
+            Edit
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

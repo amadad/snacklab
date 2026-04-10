@@ -2,7 +2,12 @@
 
 All notable changes to Snacklab are documented here.
 
+## 2026-04-10
+- ✨ Feature: restock flow with weighted-average cost + inventory polish (21:30 UTC, Ali Madad)
+
 ## 2026-03-23
+- 🐛 Fix: quantity input stuck at 0 (11:07 UTC, Ali Madad)
+
 - ✨ Feature: coming soon flag on products (11:04 UTC, Ali Madad)
 
 - ✨ Feature: stolen items tracking with theft report on dashboard (11:02 UTC, Ali Madad)

@@ -14,7 +14,7 @@ src/
 │   ├── admin/
 │   │   ├── layout.tsx              # Server-side auth gate → AdminLogin component + ErrorBoundary
 │   │   ├── page.tsx                # Dashboard: stats, charts, seller breakdown, theft report
-│   │   ├── inventory/page.tsx      # CRUD products with flags (hot, missing, stolen, comingSoon)
+│   │   ├── inventory/page.tsx      # CRUD products, restock modal w/ weighted-avg cost; FlagCheckbox + ProductRow extracted
 │   │   └── orders/
 │   │       ├── page.tsx            # Orders UI: status, reconcile, partial delivery, audit, owner ops
 │   │       └── useOrderActions.ts  # Orders state + API calls hook (extracted from page)
@@ -22,6 +22,7 @@ src/
 │       ├── auth/route.ts           # POST: login, GET: check, DELETE: logout
 │       ├── session/route.ts        # GET: role + seller + config for client
 │       ├── products/route.ts       # CRUD (POST/PUT/DELETE require admin, scoped by seller)
+│       ├── products/restock/route.ts # POST: restock a product, recomputes weighted-average unit cost
 │       ├── orders/route.ts         # GET (admin), POST (public checkout), PUT (status/reconcile/delivery), DELETE (cancel)
 │       ├── orders/patch/route.ts   # POST: owner-only ops (reassign, void, price correction) + audit
 │       ├── requests/route.ts       # GET (admin), POST (public item request)
@@ -59,6 +60,8 @@ vitest.config.ts                     # Vitest config with @/ alias
 **Partial delivery**: `admin/orders` → 📦 Deliver → modal per-item → `PUT /api/orders` with `delivered[]` → auto-completes when all items fully delivered
 
 **Owner audit**: `admin/orders` → 🕵️ Log → `GET /api/audit?orderId=` → drawer with action/actor/before/after/note
+
+**Restock**: `admin/inventory` → `+ Restock` per row → modal asks quantity + batch cost → `POST /api/products/restock` → server recomputes weighted-average unit cost `(oldQty*oldCost + batchCost) / newQty`, bumps quantity, returns before/after summary → success view animates in
 
 ## Custom Animations (globals.css)
 

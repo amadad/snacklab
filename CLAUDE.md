@@ -67,3 +67,4 @@ Set via `wrangler secret put` or Cloudflare dashboard — **never** in wrangler.
 - `wrangler.toml` must not contain secrets — use `wrangler secret put`.
 - Orders page state/actions extracted to `useOrderActions.ts` hook; page is render-only (~437 LOC).
 - Middleware (`src/middleware.ts`) adds CSRF origin check and security headers (CSP, X-Frame-Options). CSRF allows non-browser clients through — API auth still protects mutations.
+- Restock writes back to `Product.cost` as a **weighted-average** of old stock and new batch: `(oldQty*oldCost + batchCost) / newQty`. Every profit/margin calc downstream relies on `cost` being honest — always restock via `POST /api/products/restock` rather than editing `cost` directly, or the running cost drifts from reality.

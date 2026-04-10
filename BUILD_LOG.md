@@ -4,6 +4,29 @@ Chronological record of every feature and fix. Newest at the top.
 
 ---
 
+## 2026-04-10 — Restock flow with weighted-average cost + inventory UI polish
+
+**Why:** The 10yo stocker buys batches of snacks every week, and the existing workflow was "edit the product and type a new quantity" — which silently lost the batch cost and left `Product.cost` stale. Every downstream profit/margin calculation was drifting from reality. This is the single biggest daily action in the business and it needed a dedicated flow that teaches unit economics in the act of doing the work.
+
+**What shipped:**
+- `POST /api/products/restock` — takes `{ id, quantityAdded, batchCost }`, fetches product, recomputes **weighted-average unit cost** `(oldQty*oldCost + batchCost) / newQty`, bumps quantity, returns before→after summary (`oldQty`, `newQty`, `oldCost`, `newCost`, `costDelta`)
+- `admin/inventory` page: `+ Restock` button per row (mint-bold CTA) opens a modal with two fields — "How many did you add?" + "What did the whole batch cost?" — with a live per-unit cost preview as they type
+- Success state shows the before→after transition in a `<dl>` with `tabular-nums`, a plain-English explainer of what weighted-average cost means, and an `animate-bounce-in` celebratory entrance
+- Inventory page got a full visual polish pass at the same time:
+  - Row actions collapsed from 5 buttons (Restock, Mark Hot, Mark Missing, Edit, Delete) to 2 (Restock, Edit). Hot/Missing/Delete moved inside the Edit form.
+  - Palette discipline: dropped off-palette purple/red/yellow/orange/gray in favor of the design-system tokens only. Status chips unified into a two-tone system — `pink-bold` for attention (stolen), `caramel` for neutral (missing / coming soon / sold out).
+  - Borders: `border-2` → `border` (1px) everywhere
+  - Restock modal border matches page (`border-pink-light`), mint reserved for CTA + success
+  - Form: `$` prefix on money inputs, `tabular-nums` on all numeric values, uppercase-tracked labels
+  - Image input: `capture="environment"` so phone cameras open directly; styled as "Take / choose photo" button
+  - Delete moved inside the Edit form as a quiet header link (prevents accidental destruction)
+  - Flag checkboxes extracted to `FlagCheckbox` component, product row extracted to `ProductRow` component
+  - `active:scale-[0.98]` tactile feedback on primary buttons
+
+**What I intentionally didn't do:** no new roles/types/migrations, no affiliate-model collapse, no dashboard rewrites, no shopping list / daily check / goal tracker. Those were in-flight on an earlier attempt and got reset to ship this single vertical slice. Each future feature will be its own small PR.
+
+---
+
 ## 2026-03-18 — Owner controls: reassign, void, price correction, audit log
 
 **Why:** Early orders had no seller tag (Doodar was the only seller before the affiliate model existed). Owner needed tools to correct bad data without losing history.

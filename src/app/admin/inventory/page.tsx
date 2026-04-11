@@ -471,7 +471,6 @@ export default function InventoryPage() {
                   <input
                     type="file"
                     accept="image/*"
-                    capture="environment"
                     onChange={handleUpload}
                     className="hidden"
                   />

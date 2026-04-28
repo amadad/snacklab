@@ -26,8 +26,8 @@ type FetchResult = {
 
 async function fetchAdminData(config: FetchConfig): Promise<FetchResult> {
   const fetches: Promise<Response>[] = [fetch("/api/session")];
-  if (config.products) fetches.push(fetch("/api/products"));
-  if (config.orders) fetches.push(fetch("/api/orders"));
+  if (config.products) fetches.push(fetch("/api/products?scope=admin"));
+  if (config.orders) fetches.push(fetch("/api/orders?scope=admin"));
   if (config.requests) fetches.push(fetch("/api/requests"));
 
   const responses = await Promise.all(fetches);
@@ -46,6 +46,9 @@ async function fetchAdminData(config: FetchConfig): Promise<FetchResult> {
 }
 
 export function useAdminData(config: FetchConfig = { products: true }): AdminData {
+  const wantsProducts = config.products ?? false;
+  const wantsOrders = config.orders ?? false;
+  const wantsRequests = config.requests ?? false;
   const [data, setData] = useState<FetchResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -53,7 +56,7 @@ export function useAdminData(config: FetchConfig = { products: true }): AdminDat
   async function reload() {
     setError(null);
     try {
-      const result = await fetchAdminData(config);
+      const result = await fetchAdminData({ products: wantsProducts, orders: wantsOrders, requests: wantsRequests });
       setData(result);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not load admin data.");
@@ -62,14 +65,14 @@ export function useAdminData(config: FetchConfig = { products: true }): AdminDat
 
   useEffect(() => {
     let active = true;
-    fetchAdminData(config)
+    fetchAdminData({ products: wantsProducts, orders: wantsOrders, requests: wantsRequests })
       .then((result) => { if (active) setData(result); })
       .catch((err) => {
         if (active) setError(err instanceof Error ? err.message : "Could not load admin data.");
       })
       .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [wantsProducts, wantsOrders, wantsRequests]);
 
   return {
     session: data?.session ?? null,

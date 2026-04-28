@@ -3,6 +3,7 @@
 import Link from "next/link";
 import AdminLogoutButton from "@/components/AdminLogoutButton";
 import Tooltip from "@/components/Tooltip";
+import { calculateAdminMetrics } from "@/lib/adminMetrics";
 import { getFulfillmentSummary } from "@/lib/fulfillment";
 import { useAdminData } from "@/hooks/useAdminData";
 
@@ -18,68 +19,25 @@ export default function AdminPage() {
   const platformFeePct = session?.platformFeePct ?? 20;
   const defaultSeller = session?.defaultSeller ?? null;
 
-  // Filter data by role
-  const myProducts = isOwner ? products : products.filter((p) => p.seller === mySeller);
-  const myProductIds = new Set(myProducts.map((p) => p.id));
-  const myOrders = isOwner
-    ? orders
-    : orders.filter((o) =>
-        o.items.some((i) => myProductIds.has(i.productId))
-      );
+  const metrics = calculateAdminMetrics(products, orders, {
+    isOwner,
+    seller: mySeller,
+    platformFeePct,
+    defaultSeller,
+  });
 
-  const costMap: Record<string, number> = {};
-  for (const p of products) costMap[p.id] = p.cost || 0;
-
-  // voided orders are excluded from all stats/earnings
-  const completedOrders = myOrders.filter((o) => o.status === "complete" && !o.voided);
-
-  const totalRevenue = completedOrders.reduce(
-    (sum, o) => sum + o.items.reduce((s, i) => s + i.price * i.quantity, 0) + (o.fulfillmentFee ?? 0),
-    0
-  );
-  const totalCost = completedOrders.reduce(
-    (sum, o) => sum + o.items.reduce((s, i) => s + (i.cost ?? costMap[i.productId] ?? 0) * i.quantity, 0),
-    0
-  );
-  const totalProfit = totalRevenue - totalCost;
-  const platformFeeOwed = isOwner ? 0 : totalRevenue * (platformFeePct / 100);
-  const netEarnings = totalRevenue - totalCost - platformFeeOwed;
-
-  const unitsSold: Record<string, { name: string; units: number; revenue: number }> = {};
-  for (const o of completedOrders) {
-    for (const i of o.items) {
-      if (!unitsSold[i.productId]) unitsSold[i.productId] = { name: i.name, units: 0, revenue: 0 };
-      unitsSold[i.productId].units += i.quantity;
-      unitsSold[i.productId].revenue += i.price * i.quantity;
-    }
-  }
-  const topSellers = Object.values(unitsSold).sort((a, b) => b.units - a.units).slice(0, 6);
+  const myProducts = metrics.products;
+  const myOrders = metrics.orders;
+  const completedOrders = metrics.completedOrders;
+  const totalRevenue = metrics.revenue;
+  const totalCost = metrics.cost;
+  const totalProfit = metrics.grossProfit;
+  const platformFeeOwed = metrics.platformFee;
+  const netEarnings = metrics.netEarnings;
+  const topSellers = metrics.topProducts;
   const maxUnits = Math.max(...topSellers.map((s) => s.units), 1);
-
-  // Build product → seller map for fallback attribution
-  const productSellerMap: Record<string, string> = {};
-  for (const p of products) {
-    if (p.seller) productSellerMap[p.id] = p.seller;
-  }
-
-  // Per-seller breakdown (owner only) — resolve seller from order.seller or product lookup
-  const sellerBreakdown: Record<string, { revenue: number; cost: number; orders: number }> = {};
-  if (isOwner) {
-    for (const o of completedOrders) {
-      // Prefer o.seller, fall back to product lookup, then DEFAULT_SELLER env, then "Store"
-      const sellerCode =
-        o.seller ||
-        (o.items.length > 0 ? productSellerMap[o.items[0].productId] : null) ||
-        defaultSeller ||
-        "Store";
-      if (!sellerBreakdown[sellerCode]) sellerBreakdown[sellerCode] = { revenue: 0, cost: 0, orders: 0 };
-      sellerBreakdown[sellerCode].revenue += o.items.reduce((s, i) => s + i.price * i.quantity, 0) + (o.fulfillmentFee ?? 0);
-      sellerBreakdown[sellerCode].cost += o.items.reduce((s, i) => s + (i.cost ?? costMap[i.productId] ?? 0) * i.quantity, 0);
-      sellerBreakdown[sellerCode].orders += 1;
-    }
-  }
-  const sellerRows = Object.entries(sellerBreakdown).sort((a, b) => b[1].revenue - a[1].revenue);
-  const platformEarnings = sellerRows.reduce((sum, [, v]) => sum + v.revenue * (platformFeePct / 100), 0);
+  const sellerRows = metrics.sellerRows;
+  const platformEarnings = sellerRows.reduce((sum, row) => sum + row.platformFee, 0);
 
   const dayLabels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
   const salesByDay: Record<string, number> = {};
@@ -100,10 +58,9 @@ export default function AdminPage() {
   const recentOrders = [...myOrders].reverse().slice(0, 5);
   const recentRequests = [...requests].reverse().slice(0, 5);
 
-  // Theft summary
   const stolenItems = myProducts.filter((p) => p.stolen && (p.stolenQty ?? 0) > 0);
-  const totalStolenRevenue = stolenItems.reduce((sum, p) => sum + (p.stolenQty ?? 0) * p.price, 0);
-  const totalStolenCost = stolenItems.reduce((sum, p) => sum + (p.stolenQty ?? 0) * (p.cost || 0), 0);
+  const totalStolenRevenue = metrics.stolenRetailValue;
+  const totalStolenCost = metrics.stolenCostValue;
 
   return (
     <div className="min-h-screen bg-peach/30">
@@ -132,6 +89,24 @@ export default function AdminPage() {
         {error && (
           <div className="bg-white rounded-xl p-4 border-2 border-pink-bold/30 text-pink-bold mb-6">{error}</div>
         )}
+
+        <section className="bg-white rounded-2xl p-5 border-2 border-mint-bold/30 mb-6">
+          <div className="flex items-center gap-2 mb-3">
+            <h2 className="font-bold text-chocolate">Business Math Lab</h2>
+            <Tooltip text="These cards explain the money story in kid-friendly words: what came in, what snacks cost, and what is left." />
+          </div>
+          <div className="grid sm:grid-cols-2 gap-3">
+            {metrics.lessons.map((lesson) => (
+              <div key={lesson.label} className="rounded-xl bg-peach/40 p-3 border border-pink-light">
+                <div className="flex justify-between gap-3 items-baseline">
+                  <span className="font-bold text-chocolate">{lesson.label}</span>
+                  <span className="font-black text-mint-bold">${lesson.value.toFixed(2)}</span>
+                </div>
+                <p className="text-xs text-caramel mt-1">{lesson.kidExplanation}</p>
+              </div>
+            ))}
+          </div>
+        </section>
 
         {/* Stats */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
@@ -165,19 +140,15 @@ export default function AdminPage() {
               )}
             </div>
             <div className="space-y-3">
-              {sellerRows.map(([code, v]) => {
-                const fee = v.revenue * (platformFeePct / 100);
-                const net = v.revenue - v.cost - fee;
-                return (
-                  <div key={code} className="flex flex-wrap gap-x-6 gap-y-1 text-sm border-b border-pink-light/40 pb-3 last:border-0 last:pb-0">
-                    <span className="font-bold text-chocolate w-20">{code}</span>
-                    <span className="text-caramel">{v.orders} orders</span>
-                    <span className="text-chocolate">Revenue: <strong>${v.revenue.toFixed(2)}</strong></span>
-                    <span className="text-pink-bold">Fee owed: ${fee.toFixed(2)}</span>
-                    <span className={net >= 0 ? "text-mint-bold" : "text-pink-bold"}>Their net: ${net.toFixed(2)}</span>
-                  </div>
-                );
-              })}
+              {sellerRows.map((row) => (
+                <div key={row.seller} className="flex flex-wrap gap-x-6 gap-y-1 text-sm border-b border-pink-light/40 pb-3 last:border-0 last:pb-0">
+                  <span className="font-bold text-chocolate w-20">{row.seller}</span>
+                  <span className="text-caramel">{row.orders} orders</span>
+                  <span className="text-chocolate">Revenue: <strong>${row.revenue.toFixed(2)}</strong></span>
+                  <span className="text-pink-bold">Fee owed: ${row.platformFee.toFixed(2)}</span>
+                  <span className={row.netEarnings >= 0 ? "text-mint-bold" : "text-pink-bold"}>Their net: ${row.netEarnings.toFixed(2)}</span>
+                </div>
+              ))}
             </div>
           </div>
         )}

@@ -10,9 +10,17 @@ async function getSession(req: NextRequest) {
   return getSessionInfo(token);
 }
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   const products = await getProducts();
-  return NextResponse.json(products);
+  if (req.nextUrl.searchParams.get("scope") !== "admin") {
+    return NextResponse.json(products);
+  }
+
+  const authenticated = await requireAdminRequest(req);
+  if (authenticated) return authenticated;
+
+  const { seller, role } = await getSession(req);
+  return NextResponse.json(role === "owner" ? products : products.filter((product) => product.seller === seller));
 }
 
 export async function POST(req: NextRequest) {

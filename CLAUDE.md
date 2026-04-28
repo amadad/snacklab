@@ -38,10 +38,11 @@ Roles: **owner** (OWNER_CODES) sees everything; **seller** (SELLER_CODES) sees o
 Per-record KV keys (not single-blob). Legacy migration from flat arrays runs once per worker instance.
 - Types in `src/lib/types.ts`: Product, Order, OrderItem, ItemRequest, AuditEntry, ClientSession
 - Validation in `src/lib/validation.ts`: parseProductInput, parseOrderInput, parseOrderMutation, parseOwnerPatch
+- Admin business math in `src/lib/adminMetrics.ts`: shared/tested revenue, cost, gross profit, platform fee, net earnings, margin, inventory value, seller rows
 
 ### Cart
 
-Client-side React context (`CartProvider`). Persisted to localStorage (`snacklab-cart`). Enforces `maxQuantity` per product. Server validates stock on checkout.
+Client-side React context (`CartProvider`). Persisted to localStorage (`snacklab-cart`). Enforces `maxQuantity` per product. Server validates stock on checkout and applies a simple KV-backed checkout rate limit.
 
 ### Fulfillment
 
@@ -62,9 +63,12 @@ Set via `wrangler secret put` or Cloudflare dashboard — **never** in wrangler.
 ## Gotchas
 
 - KV has no transactions — concurrent order POSTs can race on stock. Server validates + attempts rollback but gap exists.
+- Public checkout has a simple KV-backed rate limiter; Cloudflare rate limiting rules are still better for serious abuse.
 - Admin layout auth is a client-side UX gate; real protection is `requireAdminRequest()` on API routes.
 - Images served through `/api/image/[key]` proxy from R2 with immutable 1-year cache.
 - `wrangler.toml` must not contain secrets — use `wrangler secret put`.
 - Orders page state/actions extracted to `useOrderActions.ts` hook; page is render-only (~437 LOC).
+- Admin dashboard is intentionally educational for kids: keep money concepts explicit (revenue, snack cost, gross profit, store fee, net earnings) and backed by `calculateAdminMetrics()` tests.
+- Seller admin API reads are scoped with `?scope=admin`; order mutations also check seller ownership server-side.
 - Middleware (`src/middleware.ts`) adds CSRF origin check and security headers (CSP, X-Frame-Options). CSRF allows non-browser clients through — API auth still protects mutations.
 - Restock writes back to `Product.cost` as a **weighted-average** of old stock and new batch: `(oldQty*oldCost + batchCost) / newQty`. Every profit/margin calc downstream relies on `cost` being honest — always restock via `POST /api/products/restock` rather than editing `cost` directly, or the running cost drifts from reality.

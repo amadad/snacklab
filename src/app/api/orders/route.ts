@@ -1,3 +1,4 @@
+import { getCloudflareContext } from "@opennextjs/cloudflare";
 import { NextRequest, NextResponse } from "next/server";
 import {
   deleteOrder,
@@ -8,9 +9,10 @@ import {
   getProducts,
   saveOrder,
   saveProduct,
+  writeAuditEntry,
 } from "@/lib/data";
 import type { Order, OrderItem, Product } from "@/lib/types";
-import { requireAdminRequest, getSellerFromToken, ADMIN_SESSION_COOKIE } from "@/lib/auth";
+import { requireAdminRequest, getSellerFromToken, getSessionInfo, ADMIN_SESSION_COOKIE } from "@/lib/auth";
 import { getFulfillmentFee } from "@/lib/fulfillment";
 import { parseDeleteOrderInput, parseOrderInput, parseOrderMutation } from "@/lib/validation";
 
@@ -18,6 +20,35 @@ type ProductChange = {
   before: Product;
   after: Product;
 };
+
+const CHECKOUT_RATE_LIMIT_WINDOW_SECONDS = 10 * 60;
+const CHECKOUT_RATE_LIMIT_MAX = 20;
+
+async function checkCheckoutRateLimit(req: NextRequest) {
+  const forwarded = req.headers.get("cf-connecting-ip") ?? req.headers.get("x-forwarded-for") ?? "unknown";
+  const ip = forwarded.split(",")[0]?.trim() || "unknown";
+  const bucket = Math.floor(Date.now() / (CHECKOUT_RATE_LIMIT_WINDOW_SECONDS * 1000));
+  const key = `rate:checkout:${bucket}:${ip}`;
+  const { env } = await getCloudflareContext({ async: true });
+  const current = Number((await env.STORE_KV.get(key)) ?? "0");
+  if (current >= CHECKOUT_RATE_LIMIT_MAX) {
+    return false;
+  }
+  await env.STORE_KV.put(key, String(current + 1), { expirationTtl: CHECKOUT_RATE_LIMIT_WINDOW_SECONDS });
+  return true;
+}
+
+async function canMutateOrder(req: NextRequest, order: Order) {
+  const token = req.cookies.get(ADMIN_SESSION_COOKIE)?.value;
+  const { role, seller } = await getSessionInfo(token);
+  if (role === "owner") return { ok: true as const, actor: "owner" };
+  if (!seller) return { ok: false as const };
+
+  const products = await getProducts();
+  const sellerProductIds = new Set(products.filter((product) => product.seller === seller).map((product) => product.id));
+  const ownsSomeItem = order.items.some((item) => sellerProductIds.has(item.productId));
+  return ownsSomeItem ? { ok: true as const, actor: seller } : { ok: false as const };
+}
 
 async function applyProductChanges(changes: Map<string, ProductChange>) {
   const appliedIds: string[] = [];
@@ -48,13 +79,28 @@ export async function GET(req: NextRequest) {
   }
 
   const orders = await getOrders();
-  return NextResponse.json(orders);
+  if (req.nextUrl.searchParams.get("scope") !== "admin") {
+    return NextResponse.json(orders);
+  }
+
+  const token = req.cookies.get(ADMIN_SESSION_COOKIE)?.value;
+  const { role, seller } = await getSessionInfo(token);
+  if (role === "owner") {
+    return NextResponse.json(orders);
+  }
+
+  const products = await getProducts();
+  const sellerProductIds = new Set(products.filter((product) => product.seller === seller).map((product) => product.id));
+  return NextResponse.json(orders.filter((order) => order.items.some((item) => sellerProductIds.has(item.productId))));
 }
 
 // Public endpoint — no auth required (customers place orders).
-// TODO: Add rate limiting (Cloudflare rate limiting rule or IP-based throttle)
-// to prevent bots from draining stock.
 export async function POST(req: NextRequest) {
+  const allowed = await checkCheckoutRateLimit(req);
+  if (!allowed) {
+    return NextResponse.json({ error: "Too many checkout attempts. Please wait a few minutes and try again." }, { status: 429 });
+  }
+
   const parsed = parseOrderInput(await req.json());
   if (!parsed.ok) {
     return NextResponse.json({ error: parsed.error }, { status: 400 });
@@ -150,6 +196,11 @@ export async function PUT(req: NextRequest) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
+  const access = await canMutateOrder(req, existing);
+  if (!access.ok) {
+    return NextResponse.json({ error: "Not your order." }, { status: 403 });
+  }
+
   const updated: Order = {
     ...existing,
     status: parsed.value.status,
@@ -169,6 +220,13 @@ export async function PUT(req: NextRequest) {
     updated.items = nextItems;
     updated.status = allDelivered ? "complete" : "partial";
     await saveOrder(updated);
+    await writeAuditEntry({
+      orderId: updated.id,
+      action: "partial_delivery",
+      actor: access.actor,
+      before: { items: existing.items.map((item) => ({ productId: item.productId, delivered: item.delivered ?? 0 })) },
+      after: { items: nextItems.map((item) => ({ productId: item.productId, delivered: item.delivered ?? 0 })) },
+    });
     return NextResponse.json(updated);
   }
 
@@ -238,6 +296,13 @@ export async function PUT(req: NextRequest) {
 
     try {
       await saveOrder(updated);
+      await writeAuditEntry({
+        orderId: updated.id,
+        action: "reconcile",
+        actor: access.actor,
+        before: { items: existing.items.map((item) => ({ productId: item.productId, quantity: item.quantity })) },
+        after: { items: nextItems.map((item) => ({ productId: item.productId, quantity: item.quantity })) },
+      });
     } catch {
       for (const change of productChanges.values()) {
         await saveProduct(change.before).catch((e) => console.error("Stock rollback failed:", e));
@@ -247,6 +312,15 @@ export async function PUT(req: NextRequest) {
     }
   } else {
     await saveOrder(updated);
+    if (existing.status !== updated.status) {
+      await writeAuditEntry({
+        orderId: updated.id,
+        action: "status_change",
+        actor: access.actor,
+        before: { status: existing.status },
+        after: { status: updated.status },
+      });
+    }
   }
 
   return NextResponse.json(updated);
@@ -266,6 +340,11 @@ export async function DELETE(req: NextRequest) {
   const existing = await getOrder(parsed.value.id);
   if (!existing) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
+
+  const access = await canMutateOrder(req, existing);
+  if (!access.ok) {
+    return NextResponse.json({ error: "Not your order." }, { status: 403 });
   }
 
   const productChanges = new Map<string, ProductChange>();
@@ -290,6 +369,13 @@ export async function DELETE(req: NextRequest) {
   }
 
   try {
+    await writeAuditEntry({
+      orderId: existing.id,
+      action: "cancel_order",
+      actor: access.actor,
+      before: { status: existing.status, items: existing.items, restoreStock: parsed.value.restoreStock },
+      after: { deleted: true },
+    });
     await deleteOrder(parsed.value.id);
   } catch {
     for (const change of productChanges.values()) {

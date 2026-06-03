@@ -2,6 +2,9 @@
 
 All notable changes to Snacklab are documented here.
 
+## 2026-04-11
+- 🐛 Fix: remove capture=environment from inventory photo input (14:14 UTC, Ali Madad)
+
 ## 2026-04-10
 - ✨ Feature: restock flow with weighted-average cost + inventory polish (21:30 UTC, Ali Madad)
 

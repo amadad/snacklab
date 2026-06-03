@@ -2,6 +2,9 @@
 
 All notable changes to Snacklab are documented here.
 
+## 2026-06-03
+- 📝 Docs: record inventory photo fix (15:30 UTC, Ali Madad)
+
 ## 2026-04-11
 - 🐛 Fix: remove capture=environment from inventory photo input (14:14 UTC, Ali Madad)
 

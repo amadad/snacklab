@@ -33,9 +33,9 @@ src/
 ├── components/
 │   ├── CartProvider.tsx            # Cart context + localStorage + maxQuantity enforcement
 │   ├── ErrorBoundary.tsx           # Client error boundary with key-based retry/remount
-│   ├── Navbar.tsx                  # Sticky nav: logo wordmark, badge bounce animation, cart total
+│   ├── Navbar.tsx                  # Sticky nav: scroll-shrink logo (big→compact), badge bounce animation, cart total
 │   ├── ProductCard.tsx             # Specimen card (SPEC code + tags), variants: in-stock, sold-out, unavailable, coming-soon
-│   ├── Storefront.tsx              # Slim header strip + in-stock grid + collapsible "Off shelf" accordion (sold-out/unavailable/coming-soon) + item request form
+│   ├── Storefront.tsx              # In-stock grid + collapsible "Off shelf" accordion (sold-out/unavailable/coming-soon) + item request form
 │   ├── AdminNav.tsx                # Shared admin chrome: logo + section crumb + nav links + logout
 │   ├── AdminLogin.tsx              # Seller code + password login form (logo header)
 │   ├── AdminLogoutButton.tsx       # Logout button (DELETE /api/auth)

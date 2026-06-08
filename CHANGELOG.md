@@ -3,6 +3,8 @@
 All notable changes to Snacklab are documented here.
 
 ## 2026-06-08
+- 🔄 Update: scroll-shrink logo header, drop tagline/count strip (12:32 UTC, Ali Madad)
+
 - 🔄 Update: consolidate header into nav, collapse off-shelf items (12:26 UTC, Ali Madad)
 
 - 🔄 Update: "Lab specimen" UI + strip public product fields (12:18 UTC, Ali Madad)

@@ -19,9 +19,9 @@ export default function AdminLogoutButton() {
       type="button"
       onClick={handleLogout}
       disabled={loading}
-      className="text-sm text-pink-light hover:text-white transition-colors disabled:opacity-60"
+      className="lab-label hover:text-paper transition-colors disabled:opacity-60"
     >
-      {loading ? "Signing out..." : "Sign out"}
+      {loading ? "Signing out…" : "Sign out"}
     </button>
   );
 }

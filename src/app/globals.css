@@ -1,53 +1,232 @@
 @import "tailwindcss";
 
+/* ============================================================
+   SNACK LAB — "specimen" design system
+   Clinical white, hairline grid, mono data labels, ink on paper,
+   one reactive accent (reagent lime) + one hazard (alert).
+   ============================================================ */
+
 @theme inline {
-  --color-pink-light: #ffe4ef;
-  --color-pink-mid: #ffb6d3;
-  --color-pink-bold: #ff6fa3;
-  --color-peach: #fff0e6;
-  --color-mint: #e6fff4;
-  --color-mint-bold: #6fd9a8;
-  --color-cream: #fffdf7;
-  --color-chocolate: #5c3d2e;
-  --color-caramel: #a0724a;
-  --font-sans: var(--font-quicksand);
-  --animate-badge-pop: badge-pop 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
-  --animate-fade-in-up: fade-in-up 0.4s ease-out both;
-  --animate-bounce-in: bounce-in 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  /* Core palette */
+  --color-paper: #f3f4f0; /* clinical off-white, faint cool-green bias */
+  --color-panel: #fbfcf9; /* specimen card surface */
+  --color-ink: #14171a; /* near-black, slight cool */
+  --color-ink-soft: #353b3a;
+  --color-muted: #6c726a; /* labels / secondary data */
+  --color-faint: #969c92; /* tertiary */
+  --color-line: #d7dad1; /* hairlines */
+  --color-line-strong: #b9bdb2;
+
+  --color-reagent: #c4f24a; /* reactive accent — fills, ink text on top */
+  --color-reagent-deep: #5f7a00; /* accent text that needs contrast on white */
+  --color-hazard: #e0532f; /* low stock / off-shelf / alerts */
+  --color-hazard-soft: #fbe7e0;
+  --color-positive: #2f8f4f; /* success / complete */
+
+  /* Legacy token remap — keeps admin & older markup coherent
+     until each surface is rewritten. Mapped onto the lab palette. */
+  --color-pink-light: #e6e9e0;
+  --color-pink-mid: #b9bdb2;
+  --color-pink-bold: #14171a;
+  --color-peach: #eef0ea;
+  --color-mint: #eef0ea;
+  --color-mint-bold: #2f8f4f;
+  --color-cream: #f3f4f0;
+  --color-chocolate: #14171a;
+  --color-caramel: #6c726a;
+
+  --font-sans: var(--font-plex-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-plex-mono), ui-monospace, "SF Mono", monospace;
+
+  --radius-card: 4px;
+
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+
+  --animate-badge-pop: badge-pop 0.3s var(--ease-out);
+  --animate-fade-in-up: fade-in-up 0.32s var(--ease-out) both;
+  --animate-bounce-in: fade-in-up 0.32s var(--ease-out) both;
+}
+
+html {
+  background: var(--color-paper);
 }
 
 body {
-  background: var(--color-cream);
-  color: var(--color-chocolate);
+  background: var(--color-paper);
+  color: var(--color-ink);
+  /* faint lab graph-paper grid */
+  background-image:
+    linear-gradient(var(--color-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--color-line) 1px, transparent 1px);
+  background-size: 28px 28px;
+  background-position: -1px -1px;
+}
+
+::selection {
+  background: var(--color-reagent);
+  color: var(--color-ink);
+}
+
+@layer components {
+  /* Mono meta label: SPEC-CODES, COLUMN HEADS, STATUS */
+  .lab-label {
+    font-family: var(--font-mono);
+    font-size: 0.6875rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--color-muted);
+  }
+
+  .lab-mono {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* A bordered surface that reads as a lab panel */
+  .lab-panel {
+    background: var(--color-panel);
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-card);
+  }
+
+  /* Specimen card */
+  .lab-card {
+    background: var(--color-panel);
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-card);
+    transition: border-color 0.16s var(--ease-out), transform 0.16s var(--ease-out),
+      box-shadow 0.16s var(--ease-out);
+  }
+  @media (hover: hover) and (pointer: fine) {
+    .lab-card-interactive:hover {
+      border-color: var(--color-ink);
+      transform: translateY(-2px);
+      box-shadow: 4px 4px 0 var(--color-line);
+    }
+  }
+
+  /* Buttons */
+  .lab-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    font-weight: 600;
+    border: 1px solid var(--color-ink);
+    border-radius: 2px;
+    padding: 0.55rem 0.9rem;
+    transition: background-color 0.14s var(--ease-out), color 0.14s var(--ease-out),
+      transform 0.1s var(--ease-out), border-color 0.14s var(--ease-out);
+    cursor: pointer;
+  }
+  .lab-btn:active {
+    transform: scale(0.98);
+  }
+  .lab-btn:focus-visible {
+    outline: 2px solid var(--color-reagent-deep);
+    outline-offset: 2px;
+  }
+  .lab-btn-primary {
+    background: var(--color-ink);
+    color: var(--color-paper);
+  }
+  @media (hover: hover) and (pointer: fine) {
+    .lab-btn-primary:hover {
+      background: var(--color-reagent);
+      color: var(--color-ink);
+      border-color: var(--color-ink);
+    }
+  }
+  .lab-btn-ghost {
+    background: transparent;
+    color: var(--color-ink);
+  }
+  @media (hover: hover) and (pointer: fine) {
+    .lab-btn-ghost:hover {
+      background: var(--color-ink);
+      color: var(--color-paper);
+    }
+  }
+  .lab-btn:disabled {
+    border-color: var(--color-line-strong);
+    background: var(--color-paper);
+    color: var(--color-faint);
+    cursor: not-allowed;
+    transform: none;
+  }
+
+  /* Form fields */
+  .lab-field {
+    font-family: var(--font-sans);
+    width: 100%;
+    background: var(--color-panel);
+    border: 1px solid var(--color-line-strong);
+    border-radius: 2px;
+    padding: 0.5rem 0.65rem;
+    color: var(--color-ink);
+    transition: border-color 0.14s var(--ease-out), box-shadow 0.14s var(--ease-out);
+  }
+  .lab-field::placeholder {
+    color: var(--color-faint);
+  }
+  .lab-field:focus {
+    outline: none;
+    border-color: var(--color-ink);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-reagent) 55%, transparent);
+  }
+
+  /* Status / spec tags */
+  .lab-tag {
+    display: inline-flex;
+    align-items: center;
+    font-family: var(--font-mono);
+    font-size: 0.625rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    font-weight: 600;
+    padding: 0.15rem 0.4rem;
+    border-radius: 2px;
+    border: 1px solid var(--color-line-strong);
+    color: var(--color-muted);
+    background: var(--color-paper);
+  }
+  .lab-tag-accent {
+    background: var(--color-reagent);
+    border-color: var(--color-ink);
+    color: var(--color-ink);
+  }
+  .lab-tag-hazard {
+    background: var(--color-hazard-soft);
+    border-color: var(--color-hazard);
+    color: var(--color-hazard);
+  }
 }
 
 @keyframes badge-pop {
   0% { transform: scale(1); }
-  50% { transform: scale(1.35); }
+  50% { transform: scale(1.3); }
   100% { transform: scale(1); }
 }
 
 @keyframes fade-in-up {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
-@keyframes bounce-in {
-  0% {
-    opacity: 0;
-    transform: scale(0.3);
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
   }
-  50% {
-    transform: scale(1.05);
-  }
-  100% {
-    opacity: 1;
-    transform: scale(1);
+  .lab-card-interactive:hover {
+    transform: none;
   }
 }

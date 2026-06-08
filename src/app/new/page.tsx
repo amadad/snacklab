@@ -41,44 +41,47 @@ const changelog: Entry[] = [
 ];
 
 const badge: Record<Entry["changes"][0]["type"], { label: string; cls: string }> = {
-  feat: { label: "feat", cls: "bg-pink-light text-pink-bold" },
-  fix: { label: "fix", cls: "bg-mint/40 text-mint-bold" },
-  chore: { label: "chore", cls: "bg-peach text-caramel" },
+  feat: { label: "feat", cls: "lab-tag-accent" },
+  fix: { label: "fix", cls: "lab-tag-hazard" },
+  chore: { label: "chore", cls: "" },
 };
 
 export default function ChangelogPage() {
   return (
-    <div className="min-h-screen bg-peach/30">
-      <nav className="bg-chocolate text-white px-6 py-3 flex items-center justify-between">
-        <Link href="/" className="text-xl font-bold hover:opacity-80 transition-opacity">
-          🍫 SnackLab
-        </Link>
-        <Link href="/" className="text-pink-light hover:text-white transition-colors text-sm">
-          Back to Store
-        </Link>
+    <div className="min-h-screen">
+      <nav className="sticky top-0 z-40 border-b border-line bg-paper/85 backdrop-blur-sm">
+        <div className="max-w-2xl mx-auto flex items-center justify-between px-4 sm:px-6 h-14">
+          <Link href="/" className="lab-mono text-base font-bold uppercase tracking-[0.18em] text-ink">
+            Snack<span className="text-reagent-deep">·</span>Lab
+          </Link>
+          <Link href="/" className="lab-label hover:text-ink transition-colors">
+            ← Store
+          </Link>
+        </div>
       </nav>
 
-      <main className="max-w-2xl mx-auto px-4 py-12">
-        <h1 className="text-3xl font-bold text-chocolate mb-2">Changelog</h1>
-        <p className="text-caramel mb-10 text-sm">What&apos;s been built, in order.</p>
+      <main className="max-w-2xl mx-auto px-4 sm:px-6 py-12">
+        <p className="lab-label mb-1">Build log</p>
+        <h1 className="lab-mono text-3xl font-bold uppercase tracking-[0.06em] text-ink mb-2">Changelog</h1>
+        <p className="text-muted mb-10 text-sm">What&apos;s been built, in order.</p>
 
         <div className="space-y-10">
           {changelog.map((entry) => (
             <div key={entry.date} className="flex gap-6">
               <div className="w-28 shrink-0 pt-0.5">
-                <p className="text-xs font-mono text-caramel">{entry.date}</p>
+                <p className="lab-mono text-xs text-muted">{entry.date}</p>
                 {entry.version && (
-                  <p className="text-xs font-bold text-chocolate mt-0.5">{entry.version}</p>
+                  <p className="lab-mono text-xs font-bold text-ink mt-0.5">{entry.version}</p>
                 )}
               </div>
-              <div className="flex-1 border-l-2 border-pink-light pl-6">
+              <div className="flex-1 border-l border-line pl-6">
                 <ul className="space-y-2">
                   {entry.changes.map((c, i) => (
                     <li key={i} className="flex items-start gap-2 text-sm">
-                      <span className={`shrink-0 text-xs font-bold px-1.5 py-0.5 rounded mt-0.5 ${badge[c.type].cls}`}>
+                      <span className={`lab-tag mt-0.5 shrink-0 ${badge[c.type].cls}`}>
                         {badge[c.type].label}
                       </span>
-                      <span className="text-chocolate">{c.text}</span>
+                      <span className="text-ink">{c.text}</span>
                     </li>
                   ))}
                 </ul>

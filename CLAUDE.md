@@ -6,6 +6,7 @@ Student-run snack storefront. Customers browse/order, pay cash at pickup. Seller
 
 - Next.js 16 (App Router) — storefront is server-rendered, admin is `"use client"`
 - Tailwind CSS v4 (theme tokens + custom animations in `globals.css` `@theme inline`)
+- **Design system: "Lab specimen"** — clinical white + faint graph-paper grid, IBM Plex Mono (data/labels) + IBM Plex Sans (body), one reagent-lime accent (`--color-reagent`) + one hazard (`--color-hazard`). Reusable component classes live in `globals.css` `@layer components`: `.lab-panel`, `.lab-card`, `.lab-btn`(+`-primary`/`-ghost`), `.lab-field`, `.lab-label`, `.lab-mono`, `.lab-tag`(+`-accent`/`-hazard`). Prefer these over re-deriving Tailwind utilities. Legacy pink/caramel/chocolate/mint tokens are **remapped** onto the lab palette (still defined in `@theme`) so older admin markup stays coherent — don't reintroduce them in new code. Brand logo: `public/logo.png` (candy beaker, the one hit of color); favicon is `src/app/icon.png`. Shared admin chrome: `components/AdminNav.tsx`.
 - Cloudflare Workers via OpenNext (`@opennextjs/cloudflare`)
 - KV (`STORE_KV`) — per-record keys with prefix (`product:`, `order:`, `request:`, `audit:`)
 - R2 (`STORE_R2`) — product image uploads
@@ -39,6 +40,7 @@ Per-record KV keys (not single-blob). Legacy migration from flat arrays runs onc
 - Types in `src/lib/types.ts`: Product, Order, OrderItem, ItemRequest, AuditEntry, ClientSession
 - Validation in `src/lib/validation.ts`: parseProductInput, parseOrderInput, parseOrderMutation, parseOwnerPatch
 - Admin business math in `src/lib/adminMetrics.ts`: shared/tested revenue, cost, gross profit, platform fee, net earnings, margin, inventory value, seller rows
+- **Public exposure boundary**: `src/lib/product.ts` `toPublicProduct()` strips internal economics (`cost`, `seller`, `stolenQty`) from any Product before it reaches customers. Both the server-rendered storefront (`app/page.tsx`) and the unauthenticated `GET /api/products` (no `scope=admin`) map through it. Never `NextResponse.json(products)` raw on a public path. `specCode(id)` derives the `SPEC-XXXX` label shown on cards.
 
 ### Cart
 

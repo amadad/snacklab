@@ -2,10 +2,11 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import Navbar from "@/components/Navbar";
 import ProductCard from "@/components/ProductCard";
 import { useCart } from "@/components/CartProvider";
-import type { Product } from "@/lib/types";
+import type { PublicProduct } from "@/lib/product";
 
 type RequestFormState = {
   name: string;
@@ -21,7 +22,7 @@ const emptyRequestForm: RequestFormState = {
   note: "",
 };
 
-export default function Storefront({ initialProducts }: { initialProducts: Product[] }) {
+export default function Storefront({ initialProducts }: { initialProducts: PublicProduct[] }) {
   const [showRequest, setShowRequest] = useState(false);
   const [requestForm, setRequestForm] = useState<RequestFormState>(emptyRequestForm);
   const [requestSent, setRequestSent] = useState(false);
@@ -34,8 +35,9 @@ export default function Storefront({ initialProducts }: { initialProducts: Produ
   const soldOut = initialProducts.filter((p) => p.quantity === 0 && !p.missing && !p.stolen && !p.comingSoon);
   const unavailable = initialProducts.filter((p) => p.missing || p.stolen);
   const comingSoon = initialProducts.filter((p) => p.comingSoon);
+  const onShelf = inStock.length;
 
-  function handleAdd(p: Product) {
+  function handleAdd(p: PublicProduct) {
     const inCart = items.find((i) => i.productId === p.id)?.quantity ?? 0;
     if (inCart >= p.quantity) return;
 
@@ -89,17 +91,47 @@ export default function Storefront({ initialProducts }: { initialProducts: Produ
   return (
     <div className="min-h-screen flex flex-col">
       <Navbar />
-      <main className="max-w-5xl mx-auto px-4 py-8 flex-1">
-        <h1 className="text-4xl font-bold text-center text-pink-bold mb-2">Welcome to Snack Lab!</h1>
-        <p className="text-center text-caramel mb-8">Browse our yummy selection</p>
+      <main className="max-w-5xl w-full mx-auto px-4 sm:px-6 py-8 flex-1">
+        {/* Masthead */}
+        <header className="lab-panel mb-8 flex flex-col gap-5 px-5 py-5 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-4">
+            <h1 className="m-0 shrink-0">
+              <Image
+                src="/logo.png"
+                alt="Snack Lab"
+                width={320}
+                height={313}
+                priority
+                className="h-20 w-auto drop-shadow-sm sm:h-24"
+              />
+            </h1>
+            <p className="lab-label leading-relaxed">
+              Student-run
+              <br />
+              <span className="text-faint">Pay cash on pickup</span>
+            </p>
+          </div>
+          <dl className="flex gap-6">
+            <div>
+              <dt className="lab-label">On shelf</dt>
+              <dd className="lab-mono text-2xl font-bold text-ink">{String(onShelf).padStart(2, "0")}</dd>
+            </div>
+            <div>
+              <dt className="lab-label">Catalog</dt>
+              <dd className="lab-mono text-2xl font-bold text-muted">
+                {String(initialProducts.length).padStart(2, "0")}
+              </dd>
+            </div>
+          </dl>
+        </header>
 
-        {inStock.length === 0 && soldOut.length === 0 ? (
-          <div className="text-center py-20">
-            <div className="text-6xl mb-4">🍬</div>
-            <p className="text-caramel/70 text-lg">No items yet — check back soon!</p>
+        {inStock.length === 0 && soldOut.length === 0 && unavailable.length === 0 && comingSoon.length === 0 ? (
+          <div className="lab-panel grid place-items-center px-6 py-20 text-center">
+            <p className="lab-label mb-2">No specimens on record</p>
+            <p className="text-sm text-muted">The shelf is empty — check back soon.</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3">
             {inStock.map((p, i) => (
               <ProductCard
                 key={p.id}
@@ -123,102 +155,107 @@ export default function Storefront({ initialProducts }: { initialProducts: Produ
           </div>
         )}
 
-        <div className="mt-16 border-t-2 border-pink-light pt-10">
-          <div className="text-center mb-4">
-            <p className="text-caramel text-sm">Don&apos;t see what you want?</p>
+        {/* Request bench */}
+        <section className="mt-14 border-t border-line pt-8">
+          <div className="flex items-center justify-between gap-4">
+            <p className="lab-label">Specimen not listed?</p>
             <button
               onClick={() => {
                 setShowRequest(!showRequest);
                 setRequestError(null);
               }}
-              className="mt-2 text-pink-bold font-semibold hover:underline text-sm focus:outline-none focus:ring-2 focus:ring-pink-bold/40 rounded"
+              className="lab-btn lab-btn-ghost !py-1.5"
             >
-              {showRequest ? "Never mind" : "Request an item →"}
+              {showRequest ? "Cancel" : "File a request →"}
             </button>
           </div>
 
           {showRequest && (
-            <div className="max-w-md mx-auto bg-white rounded-2xl border-2 border-pink-light p-6">
+            <div className="lab-panel mt-4 max-w-md p-5 animate-fade-in-up">
               {requestSent ? (
-                <div className="text-center py-4">
-                  <div className="text-4xl mb-2">🙏</div>
-                  <p className="font-bold text-chocolate">Got it! We&apos;ll see what we can do.</p>
+                <div className="py-4 text-center">
+                  <p className="lab-label mb-1 text-reagent-deep">Request logged</p>
+                  <p className="font-semibold text-ink">Got it — we&apos;ll see what we can source.</p>
                 </div>
               ) : (
                 <form onSubmit={handleRequestSubmit} className="space-y-3">
-                  <h3 className="font-bold text-chocolate text-lg">Request an Item</h3>
+                  <h3 className="lab-mono text-sm font-bold uppercase tracking-[0.1em] text-ink">
+                    Request form
+                  </h3>
                   <div>
-                    <label htmlFor="req-name" className="block text-xs font-semibold text-caramel mb-1">Your Name</label>
+                    <label htmlFor="req-name" className="lab-label mb-1 block">Your name</label>
                     <input
                       id="req-name"
                       type="text"
                       required
                       value={requestForm.name}
                       onChange={(e) => setRequestForm((f) => ({ ...f, name: e.target.value }))}
-                      className="w-full border-2 border-pink-light rounded-lg px-3 py-2 text-sm focus:border-pink-bold focus:outline-none focus:ring-2 focus:ring-pink-bold/30"
+                      className="lab-field"
                       placeholder="Name"
                     />
                   </div>
                   <div>
-                    <label htmlFor="req-email" className="block text-xs font-semibold text-caramel mb-1">Email</label>
+                    <label htmlFor="req-email" className="lab-label mb-1 block">Email</label>
                     <input
                       id="req-email"
                       type="email"
                       required
                       value={requestForm.email}
                       onChange={(e) => setRequestForm((f) => ({ ...f, email: e.target.value }))}
-                      className="w-full border-2 border-pink-light rounded-lg px-3 py-2 text-sm focus:border-pink-bold focus:outline-none focus:ring-2 focus:ring-pink-bold/30"
+                      className="lab-field"
                       placeholder="email@example.com"
                     />
                   </div>
                   <div>
-                    <label htmlFor="req-item" className="block text-xs font-semibold text-caramel mb-1">What do you want?</label>
+                    <label htmlFor="req-item" className="lab-label mb-1 block">What do you want?</label>
                     <input
                       id="req-item"
                       type="text"
                       required
                       value={requestForm.item}
                       onChange={(e) => setRequestForm((f) => ({ ...f, item: e.target.value }))}
-                      className="w-full border-2 border-pink-light rounded-lg px-3 py-2 text-sm focus:border-pink-bold focus:outline-none focus:ring-2 focus:ring-pink-bold/30"
-                      placeholder="e.g. Takis, Sour Patch Kids..."
+                      className="lab-field"
+                      placeholder="e.g. Takis, Sour Patch Kids…"
                     />
                   </div>
                   <div>
-                    <label htmlFor="req-note" className="block text-xs font-semibold text-caramel mb-1">Anything else? (optional)</label>
+                    <label htmlFor="req-note" className="lab-label mb-1 block">Notes (optional)</label>
                     <textarea
                       id="req-note"
                       value={requestForm.note}
                       onChange={(e) => setRequestForm((f) => ({ ...f, note: e.target.value }))}
-                      className="w-full border-2 border-pink-light rounded-lg px-3 py-2 text-sm focus:border-pink-bold focus:outline-none focus:ring-2 focus:ring-pink-bold/30"
+                      className="lab-field"
                       rows={2}
-                      placeholder="How much would you pay? Any other notes?"
+                      placeholder="How much would you pay? Anything else?"
                     />
                   </div>
-                  {requestError && <p role="alert" className="text-sm text-pink-bold">{requestError}</p>}
-                  <button
-                    type="submit"
-                    disabled={submittingRequest}
-                    className="w-full bg-pink-bold text-white py-2 rounded-full font-semibold hover:bg-pink-mid transition-colors disabled:opacity-60 focus:outline-none focus:ring-2 focus:ring-pink-bold/40"
-                  >
-                    {submittingRequest ? "Sending..." : "Send Request"}
+                  {requestError && (
+                    <p role="alert" className="lab-mono text-sm text-hazard">
+                      {requestError}
+                    </p>
+                  )}
+                  <button type="submit" disabled={submittingRequest} className="lab-btn lab-btn-primary w-full">
+                    {submittingRequest ? "Sending…" : "Submit request"}
                   </button>
                 </form>
               )}
             </div>
           )}
 
-          <p className="text-center text-xs text-caramel/50 mt-8">
+          <p className="mt-8 max-w-2xl text-xs leading-relaxed text-faint">
             Snack Lab is a student-run store. All sales are final. Pay with cash when your order is
             handed off. Questions? Find us at lunch.
           </p>
-        </div>
+        </section>
       </main>
 
-      <footer className="border-t border-pink-light/60 px-6 py-4 flex items-center justify-between text-sm text-caramel/60">
-        <span>Snack Lab</span>
-        <Link href="/admin" className="hover:text-caramel transition-colors">
-          Admin
-        </Link>
+      <footer className="border-t border-line">
+        <div className="max-w-5xl mx-auto flex items-center justify-between px-4 sm:px-6 py-4">
+          <span className="lab-label">Snack Lab · est. lunch period</span>
+          <Link href="/admin" className="lab-label hover:text-ink transition-colors">
+            Admin →
+          </Link>
+        </div>
       </footer>
     </div>
   );

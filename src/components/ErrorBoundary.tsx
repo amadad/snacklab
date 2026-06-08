@@ -19,8 +19,9 @@ export default class ErrorBoundary extends Component<Props, State> {
       if (this.props.fallback) return this.props.fallback;
       return (
         <div className="p-8 text-center">
-          <h2 className="text-xl font-bold text-chocolate mb-2">Something went wrong</h2>
-          <p className="text-caramel text-sm mb-4">{this.state.error.message}</p>
+          <p className="lab-label mb-2 text-hazard">Error · uncaught exception</p>
+          <h2 className="lab-mono mb-2 text-lg font-bold text-ink">Something went wrong</h2>
+          <p className="lab-mono mb-4 text-sm text-muted">{this.state.error.message}</p>
           <button
             onClick={() => {
               this.resetKey += 1;
@@ -28,7 +29,7 @@ export default class ErrorBoundary extends Component<Props, State> {
               // Force children to remount so useEffects re-fire
               this.forceUpdate();
             }}
-            className="bg-pink-bold text-white px-4 py-2 rounded-full font-semibold hover:bg-pink-mid transition-colors"
+            className="lab-btn lab-btn-primary"
           >
             Try again
           </button>

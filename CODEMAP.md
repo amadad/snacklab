@@ -5,9 +5,10 @@
 ```
 src/
 ├── app/
-│   ├── layout.tsx                  # Root layout (Quicksand font, CartProvider, ErrorBoundary)
-│   ├── globals.css                 # Tailwind theme + keyframe animations (badge-pop, fade-in-up, bounce-in)
-│   ├── page.tsx                    # SSR storefront (force-dynamic, passes products to Storefront)
+│   ├── layout.tsx                  # Root layout (IBM Plex Mono+Sans fonts, CartProvider, ErrorBoundary)
+│   ├── globals.css                 # "Lab specimen" design system: theme tokens + @layer components (.lab-panel/-card/-btn/-field/-label/-mono/-tag) + keyframes (badge-pop, fade-in-up)
+│   ├── icon.png                    # Favicon (candy-beaker logo); old favicon.ico removed
+│   ├── page.tsx                    # SSR storefront (force-dynamic, maps products through toPublicProduct → Storefront)
 │   ├── new/page.tsx                # Changelog page
 │   ├── cart/
 │   │   └── page.tsx                # Cart + checkout + fulfillment selection + order confirmation
@@ -21,7 +22,7 @@ src/
 │   └── api/
 │       ├── auth/route.ts           # POST: login, GET: check, DELETE: logout
 │       ├── session/route.ts        # GET: role + seller + config for client
-│       ├── products/route.ts       # CRUD (POST/PUT/DELETE require admin, admin reads scoped by seller)
+│       ├── products/route.ts       # CRUD (POST/PUT/DELETE require admin, admin reads scoped by seller; public read strips cost/seller/stolenQty via toPublicProduct)
 │       ├── products/restock/route.ts # POST: restock a product, recomputes weighted-average unit cost
 │       ├── orders/route.ts         # GET (admin scoped), POST (public checkout + rate limit), PUT/DELETE (seller-guarded + audit)
 │       ├── orders/patch/route.ts   # POST: owner-only ops (reassign, void, price correction) + audit
@@ -33,9 +34,10 @@ src/
 │   ├── CartProvider.tsx            # Cart context + localStorage + maxQuantity enforcement
 │   ├── ErrorBoundary.tsx           # Client error boundary with key-based retry/remount
 │   ├── Navbar.tsx                  # Sticky nav, badge bounce animation, cart total
-│   ├── ProductCard.tsx             # Product card with variants: in-stock, sold-out, unavailable, coming-soon
-│   ├── Storefront.tsx              # Product grid layout + item request form (cards via ProductCard)
-│   ├── AdminLogin.tsx              # Seller code + password login form
+│   ├── ProductCard.tsx             # Specimen card (SPEC code + tags), variants: in-stock, sold-out, unavailable, coming-soon
+│   ├── Storefront.tsx              # Logo masthead + specimen grid + item request form (cards via ProductCard)
+│   ├── AdminNav.tsx                # Shared admin chrome: logo + section crumb + nav links + logout
+│   ├── AdminLogin.tsx              # Seller code + password login form (logo header)
 │   ├── AdminLogoutButton.tsx       # Logout button (DELETE /api/auth)
 │   └── Tooltip.tsx                 # Reusable click-to-open tooltip with outside-click dismiss
 ├── hooks/
@@ -44,6 +46,7 @@ src/
 │   ├── auth.ts                     # HMAC sessions, role helpers, requireAdminRequest
 │   ├── data.ts                     # KV data layer: per-record CRUD, audit log, legacy migration
 │   ├── adminMetrics.ts             # Tested business math for dashboard: revenue, cost, profit, fees, inventory, seller rows
+│   ├── product.ts                  # toPublicProduct() (strips cost/seller/stolenQty) + specCode() for public storefront
 │   ├── types.ts                    # Shared types: Product, Order, OrderItem, ItemRequest, AuditEntry, ClientSession
 │   ├── validation.ts               # Input parsers: product, order, mutation, owner patch, item request
 │   ├── fulfillment.ts              # Fulfillment methods, fees, labels, time slots
@@ -58,7 +61,7 @@ vitest.config.ts                     # Vitest config with @/ alias
 
 **Admin login**: `admin/layout.tsx` (server) → checks cookie → `AdminLogin` (client) → `POST /api/auth` → cookie set → `router.refresh()`
 
-**Partial delivery**: `admin/orders` → 📦 Deliver → modal per-item → `PUT /api/orders` with `delivered[]` → auto-completes when all items fully delivered
+**Partial delivery**: `admin/orders` → Deliver → modal per-item → `PUT /api/orders` with `delivered[]` → auto-completes when all items fully delivered
 
 **Owner audit**: `admin/orders` → Log → `GET /api/audit?orderId=` → drawer with action/actor/before/after/note. Owner ops plus normal status/reconcile/partial/cancel actions write audit entries.
 
@@ -69,8 +72,8 @@ vitest.config.ts                     # Vitest config with @/ alias
 | Token | Use |
 |-------|-----|
 | `animate-badge-pop` | Cart count badge bounce on add |
-| `animate-fade-in-up` | Staggered product card entrance |
-| `animate-bounce-in` | Confirmation page celebration |
+| `animate-fade-in-up` | Staggered specimen-card entrance, modals, confirmation |
+| `animate-bounce-in` | Legacy alias → `fade-in-up` (kept for back-compat) |
 
 ## Tests
 

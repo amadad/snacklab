@@ -3,6 +3,7 @@ import { deleteProduct, genId, getProduct, getProducts, saveProduct } from "@/li
 import type { Product } from "@/lib/types";
 import { requireAdminRequest, getSessionInfo, ADMIN_SESSION_COOKIE } from "@/lib/auth";
 import { deleteManagedImageIfUnused } from "@/lib/images";
+import { toPublicProduct } from "@/lib/product";
 import { parseId, parseProductInput } from "@/lib/validation";
 
 async function getSession(req: NextRequest) {
@@ -13,7 +14,8 @@ async function getSession(req: NextRequest) {
 export async function GET(req: NextRequest) {
   const products = await getProducts();
   if (req.nextUrl.searchParams.get("scope") !== "admin") {
-    return NextResponse.json(products);
+    // Public storefront read — strip internal economics (cost/seller/stolenQty).
+    return NextResponse.json(products.map(toPublicProduct));
   }
 
   const authenticated = await requireAdminRequest(req);

@@ -125,42 +125,45 @@ export default function CartPage() {
     return (
       <div className="min-h-screen">
         <Navbar />
-        <main className="max-w-lg mx-auto px-4 py-20 text-center">
-          <div className="text-6xl mb-4 animate-bounce-in">🎉</div>
-          <h1 className="text-3xl font-bold text-pink-bold mb-4 animate-fade-in-up">Order Placed!</h1>
-          <p className="text-caramel mb-2 animate-fade-in-up" style={{ animationDelay: "100ms" }}>
-            Thanks, {submittedOrder.name}! Your order has been submitted. Pay with cash when you get it.
-          </p>
-          <p className="text-sm text-caramel/80 mb-2 animate-fade-in-up" style={{ animationDelay: "150ms" }}>
-            {getFulfillmentSummary(submittedOrder.fulfillment)}
-          </p>
+        <main className="max-w-lg mx-auto px-4 sm:px-6 py-16">
+          <div className="lab-panel p-6 text-center animate-fade-in-up">
+            <p className="lab-label mb-2 text-reagent-deep">Order logged ✓</p>
+            <h1 className="lab-mono text-2xl font-bold uppercase tracking-[0.08em] text-ink">
+              Reserved
+            </h1>
+            <p className="mt-2 text-sm text-muted">
+              Thanks, {submittedOrder.name}. Pay with cash when you collect.
+            </p>
+            <p className="lab-mono mt-1 text-xs text-faint">
+              {getFulfillmentSummary(submittedOrder.fulfillment)}
+            </p>
 
-          <div
-            className="bg-white rounded-xl p-5 border-2 border-pink-light text-left mb-6 animate-fade-in-up"
-            style={{ animationDelay: "200ms" }}
-          >
-            <h2 className="font-bold text-chocolate mb-3">Order Summary</h2>
-            <div className="space-y-2">
-              {submittedOrder.items.map((item) => (
-                <div key={item.productId} className="flex justify-between text-sm">
-                  <span className="text-chocolate">{item.name} x{item.quantity}</span>
-                  <span className="text-caramel">${(item.price * item.quantity).toFixed(2)}</span>
-                </div>
-              ))}
+            <div className="mt-6 border-t border-line pt-4 text-left">
+              <p className="lab-label mb-3">Manifest</p>
+              <div className="space-y-2">
+                {submittedOrder.items.map((item) => (
+                  <div key={item.productId} className="flex justify-between text-sm">
+                    <span className="text-ink">
+                      {item.name} <span className="lab-mono text-faint">×{item.quantity}</span>
+                    </span>
+                    <span className="lab-mono text-muted">
+                      ${(item.price * item.quantity).toFixed(2)}
+                    </span>
+                  </div>
+                ))}
+              </div>
+              <div className="mt-3 flex justify-between border-t border-line pt-3">
+                <span className="lab-label">Total due</span>
+                <span className="lab-mono text-lg font-bold text-ink">
+                  ${submittedOrder.total.toFixed(2)}
+                </span>
+              </div>
             </div>
-            <div className="border-t border-pink-light mt-3 pt-2 flex justify-between font-bold">
-              <span className="text-chocolate">Total</span>
-              <span className="text-pink-bold">${submittedOrder.total.toFixed(2)}</span>
-            </div>
+
+            <Link href="/" className="lab-btn lab-btn-primary mt-6 w-full">
+              ← Back to shelf
+            </Link>
           </div>
-
-          <Link
-            href="/"
-            className="inline-block bg-pink-bold text-white px-6 py-3 rounded-full font-semibold hover:bg-pink-mid transition-colors animate-fade-in-up"
-            style={{ animationDelay: "300ms" }}
-          >
-            Back to Store
-          </Link>
         </main>
       </div>
     );
@@ -169,73 +172,75 @@ export default function CartPage() {
   return (
     <div className="min-h-screen">
       <Navbar />
-      <main className="max-w-4xl mx-auto px-4 py-8">
-        <h1 className="text-3xl font-bold text-pink-bold mb-6">Your Cart</h1>
+      <main className="max-w-4xl mx-auto px-4 sm:px-6 py-8">
+        <header className="mb-6 flex items-end justify-between">
+          <h1 className="lab-mono text-2xl font-bold uppercase tracking-[0.08em] text-ink">Cart</h1>
+          <span className="lab-label">
+            {items.length} line{items.length === 1 ? "" : "s"}
+          </span>
+        </header>
 
         {items.length === 0 ? (
-          <div className="text-center py-16">
-            <div className="text-7xl mb-2">🍡</div>
-            <div className="text-3xl mb-4">💤</div>
-            <p className="text-caramel text-lg mb-1">Your cart is empty</p>
-            <p className="text-caramel/60 text-sm mb-6">Your snacks are waiting for you!</p>
-            <Link
-              href="/"
-              className="inline-block bg-pink-bold text-white px-6 py-3 rounded-full font-semibold hover:bg-pink-mid transition-colors"
-            >
-              Browse Items
+          <div className="lab-panel grid place-items-center px-6 py-16 text-center">
+            <p className="lab-label mb-2">Cart empty — 0 specimens</p>
+            <p className="text-sm text-muted mb-6">Nothing reserved yet.</p>
+            <Link href="/" className="lab-btn lab-btn-primary">
+              Browse shelf
             </Link>
           </div>
         ) : (
-          <div className="lg:grid lg:grid-cols-[1fr_340px] lg:gap-8 lg:items-start">
-            {/* Cart items */}
-            <div className="space-y-4 mb-8 lg:mb-0">
+          <div className="lg:grid lg:grid-cols-[1fr_340px] lg:gap-6 lg:items-start">
+            {/* Cart line items */}
+            <div className="space-y-3 mb-6 lg:mb-0">
               {items.map((item) => (
-                <div
-                  key={item.productId}
-                  className="bg-white rounded-xl p-4 flex items-center gap-4 border-2 border-pink-light"
-                >
+                <div key={item.productId} className="lab-panel flex items-center gap-4 p-3">
                   {item.image ? (
                     <Image
                       src={item.image}
                       alt={item.name}
-                      width={64}
-                      height={64}
+                      width={56}
+                      height={56}
                       unoptimized
-                      className="w-16 h-16 rounded-lg object-cover"
+                      className="h-14 w-14 rounded-[2px] border border-line object-cover"
                     />
                   ) : (
-                    <div className="w-16 h-16 rounded-lg bg-peach flex items-center justify-center text-2xl">
-                      🍡
+                    <div className="grid h-14 w-14 place-items-center rounded-[2px] border border-line bg-paper">
+                      <span className="lab-label text-faint">—</span>
                     </div>
                   )}
-                  <div className="flex-1 min-w-0">
-                    <h3 className="font-bold text-chocolate">{item.name}</h3>
-                    <p className="text-pink-bold font-semibold">${item.price.toFixed(2)}</p>
+                  <div className="min-w-0 flex-1">
+                    <h3 className="truncate font-semibold text-ink">{item.name}</h3>
+                    <p className="lab-mono text-sm text-muted">${item.price.toFixed(2)}</p>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center border border-line-strong rounded-[2px]">
                     <button
                       onClick={() => updateQuantity(item.productId, item.quantity - 1)}
                       aria-label={`Decrease quantity of ${item.name}`}
-                      className="w-10 h-10 rounded-full bg-pink-light text-pink-bold font-bold hover:bg-pink-mid hover:text-white transition-colors focus:outline-none focus:ring-2 focus:ring-pink-bold/40"
+                      className="lab-mono h-9 w-9 text-ink hover:bg-ink hover:text-paper transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-reagent-deep"
                     >
-                      -
+                      −
                     </button>
-                    <span className="w-8 text-center font-bold" aria-label={`${item.quantity} in cart`}>{item.quantity}</span>
+                    <span
+                      className="lab-mono w-9 text-center text-sm font-semibold"
+                      aria-label={`${item.quantity} in cart`}
+                    >
+                      {item.quantity}
+                    </span>
                     <button
                       onClick={() => updateQuantity(item.productId, item.quantity + 1)}
                       aria-label={`Increase quantity of ${item.name}`}
-                      className="w-10 h-10 rounded-full bg-pink-light text-pink-bold font-bold hover:bg-pink-mid hover:text-white transition-colors focus:outline-none focus:ring-2 focus:ring-pink-bold/40"
+                      className="lab-mono h-9 w-9 text-ink hover:bg-ink hover:text-paper transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-reagent-deep"
                     >
                       +
                     </button>
                   </div>
-                  <div className="text-right ml-2">
-                    <p className="text-sm font-semibold text-chocolate">
+                  <div className="ml-1 text-right">
+                    <p className="lab-mono text-sm font-semibold text-ink">
                       ${(item.price * item.quantity).toFixed(2)}
                     </p>
                     <button
                       onClick={() => removeItem(item.productId)}
-                      className="text-caramel hover:text-pink-bold transition-colors text-sm focus:outline-none focus:underline"
+                      className="lab-label hover:text-hazard transition-colors focus:outline-none focus-visible:underline"
                     >
                       Remove
                     </button>
@@ -245,27 +250,27 @@ export default function CartPage() {
             </div>
 
             {/* Sticky summary + checkout */}
-            <div className="lg:sticky lg:top-20 space-y-6">
-              <div className="bg-white rounded-xl p-6 border-2 border-pink-light space-y-2">
-                <div className="flex justify-between text-sm text-caramel">
-                  <span>Subtotal</span>
-                  <span>${total.toFixed(2)}</span>
+            <div className="lg:sticky lg:top-20 space-y-4">
+              <div className="lab-panel p-5 space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted">Subtotal</span>
+                  <span className="lab-mono text-ink">${total.toFixed(2)}</span>
                 </div>
-                <div className="flex justify-between text-sm text-caramel">
-                  <span>Fulfillment</span>
-                  <span>{getFulfillmentLabel(fulfillmentMethod)}</span>
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted">Fulfillment</span>
+                  <span className="lab-mono text-ink">{getFulfillmentLabel(fulfillmentMethod)}</span>
                 </div>
                 {fulfillmentFee > 0 && (
-                  <div className="flex justify-between text-sm text-caramel">
-                    <span>Home drop-off fee</span>
-                    <span>${fulfillmentFee.toFixed(2)}</span>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted">Drop-off fee</span>
+                    <span className="lab-mono text-ink">${fulfillmentFee.toFixed(2)}</span>
                   </div>
                 )}
-                <div className="flex justify-between text-xl font-bold text-chocolate border-t border-pink-light pt-2">
-                  <span>Total</span>
-                  <span className="text-pink-bold">${orderTotal.toFixed(2)}</span>
+                <div className="flex items-baseline justify-between border-t border-line pt-2">
+                  <span className="lab-label">Total</span>
+                  <span className="lab-mono text-xl font-bold text-ink">${orderTotal.toFixed(2)}</span>
                 </div>
-                <p className="text-sm text-caramel mt-1">Pay with cash when your order is handed off</p>
+                <p className="lab-mono text-xs text-faint pt-1">Cash on pickup</p>
               </div>
 
               {error && (
@@ -273,9 +278,9 @@ export default function CartPage() {
                   ref={errorRef}
                   role="alert"
                   aria-live="assertive"
-                  className="rounded-xl border border-pink-bold/30 bg-peach/60 p-3 text-sm text-pink-bold space-y-2"
+                  className="rounded-[2px] border border-hazard bg-hazard-soft p-3 text-sm text-hazard space-y-2"
                 >
-                  <p>{error}</p>
+                  <p className="lab-mono">{error}</p>
                   {issues.length > 0 && (
                     <ul className="list-disc pl-5 space-y-1">
                       {issues.map((issue) => {
@@ -291,46 +296,56 @@ export default function CartPage() {
                 </div>
               )}
 
-              <form onSubmit={handleCheckout} className="bg-white rounded-xl p-6 border-2 border-pink-light space-y-4">
-                <h2 className="text-xl font-bold text-chocolate">Checkout</h2>
+              <form onSubmit={handleCheckout} className="lab-panel p-5 space-y-4">
+                <h2 className="lab-mono text-sm font-bold uppercase tracking-[0.1em] text-ink">
+                  Checkout
+                </h2>
 
                 <div>
-                  <label htmlFor="checkout-name" className="block text-sm font-semibold text-caramel mb-1">Your Name</label>
+                  <label htmlFor="checkout-name" className="lab-label mb-1 block">Your name</label>
                   <input
                     id="checkout-name"
                     type="text"
                     required
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    className="w-full border-2 border-pink-light rounded-lg px-3 py-2 focus:border-pink-bold focus:outline-none focus:ring-2 focus:ring-pink-bold/30"
+                    className="lab-field"
                     placeholder="Name"
                   />
                 </div>
                 <div>
-                  <label htmlFor="checkout-email" className="block text-sm font-semibold text-caramel mb-1">Email</label>
+                  <label htmlFor="checkout-email" className="lab-label mb-1 block">Email</label>
                   <input
                     id="checkout-email"
                     type="email"
                     required
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="w-full border-2 border-pink-light rounded-lg px-3 py-2 focus:border-pink-bold focus:outline-none focus:ring-2 focus:ring-pink-bold/30"
+                    className="lab-field"
                     placeholder="email@example.com"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-semibold text-caramel mb-2">How should we get this to you?</label>
-                  <div className="grid gap-2 sm:grid-cols-3">
+                  <label className="lab-label mb-2 block">How should we get this to you?</label>
+                  <div className="space-y-2">
                     {(["during-school", "after-school", "house-dropoff"] as FulfillmentMethod[]).map((method) => (
                       <label
                         key={method}
-                        className={`rounded-xl border-2 px-4 py-3 cursor-pointer transition-colors ${
+                        className={`flex cursor-pointer items-center justify-between gap-3 rounded-[2px] border px-3 py-2.5 transition-colors ${
                           fulfillmentMethod === method
-                            ? "border-pink-bold bg-pink-light/60"
-                            : "border-pink-light bg-white hover:border-pink-mid"
+                            ? "border-ink bg-reagent/25"
+                            : "border-line-strong hover:border-ink"
                         }`}
                       >
+                        <span>
+                          <span className="block text-sm font-semibold text-ink">
+                            {getFulfillmentLabel(method)}
+                          </span>
+                          <span className="lab-mono block text-xs text-muted">
+                            {getFulfillmentDescription(method)}
+                          </span>
+                        </span>
                         <input
                           type="radio"
                           name="fulfillment-method"
@@ -339,8 +354,12 @@ export default function CartPage() {
                           onChange={() => updateFulfillmentMethod(method)}
                           className="sr-only"
                         />
-                        <span className="block font-semibold text-chocolate">{getFulfillmentLabel(method)}</span>
-                        <span className="block text-xs text-caramel mt-1">{getFulfillmentDescription(method)}</span>
+                        <span
+                          aria-hidden
+                          className={`h-3.5 w-3.5 shrink-0 rounded-full border ${
+                            fulfillmentMethod === method ? "border-ink bg-reagent" : "border-line-strong"
+                          }`}
+                        />
                       </label>
                     ))}
                   </div>
@@ -348,13 +367,15 @@ export default function CartPage() {
 
                 {fulfillmentNeedsTime && (
                   <div>
-                    <label htmlFor="checkout-timeslot" className="block text-sm font-semibold text-caramel mb-1">After-school time slot</label>
+                    <label htmlFor="checkout-timeslot" className="lab-label mb-1 block">
+                      After-school time slot
+                    </label>
                     <select
                       id="checkout-timeslot"
                       value={timeSlot}
                       required={fulfillmentNeedsTime}
                       onChange={(e) => setTimeSlot(e.target.value)}
-                      className="w-full border-2 border-pink-light rounded-lg px-3 py-2 focus:border-pink-bold focus:outline-none focus:ring-2 focus:ring-pink-bold/30 bg-white"
+                      className="lab-field"
                     >
                       <option value="">Choose a time</option>
                       {getTimeSlotOptions(fulfillmentMethod).map((option) => (
@@ -368,7 +389,7 @@ export default function CartPage() {
 
                 {fulfillmentNeedsLocation && (
                   <div>
-                    <label htmlFor="checkout-location" className="block text-sm font-semibold text-caramel mb-1">
+                    <label htmlFor="checkout-location" className="lab-label mb-1 block">
                       {getLocationDetailsLabel(fulfillmentMethod)}
                     </label>
                     <textarea
@@ -376,19 +397,15 @@ export default function CartPage() {
                       value={locationDetails}
                       required={fulfillmentNeedsLocation}
                       onChange={(e) => setLocationDetails(e.target.value)}
-                      className="w-full border-2 border-pink-light rounded-lg px-3 py-2 focus:border-pink-bold focus:outline-none focus:ring-2 focus:ring-pink-bold/30"
+                      className="lab-field"
                       rows={2}
                       placeholder={getLocationDetailsPlaceholder(fulfillmentMethod)}
                     />
                   </div>
                 )}
 
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="w-full bg-mint-bold text-white py-3 rounded-full font-bold text-lg hover:bg-mint-bold/80 transition-colors active:scale-95 disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-mint-bold/40"
-                >
-                  {loading ? "Placing Order..." : "Place Order"}
+                <button type="submit" disabled={loading} className="lab-btn lab-btn-primary w-full !py-3">
+                  {loading ? "Placing order…" : "Place order"}
                 </button>
               </form>
             </div>

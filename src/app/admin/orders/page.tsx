@@ -1,8 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
-import AdminLogoutButton from "@/components/AdminLogoutButton";
+import AdminNav from "@/components/AdminNav";
 import { getFulfillmentSummary } from "@/lib/fulfillment";
 import type { Order } from "@/lib/types";
 import { useOrderActions } from "./useOrderActions";
@@ -15,24 +14,19 @@ export default function OrdersPage() {
   const pendingCount = actions.orders.filter((o) => o.status === "pending" || o.status === "partial").length;
 
   return (
-    <div className="min-h-screen bg-peach/30">
-      <nav className="bg-chocolate text-white px-6 py-3 flex items-center justify-between gap-4">
-        <div className="flex items-center gap-4">
-          <Link href="/admin" className="text-pink-light hover:text-white transition-colors">
-            ← Back
-          </Link>
-          <span className="text-xl font-bold">Orders</span>
-          {pendingCount > 0 && (
-            <span className="bg-pink-bold text-white text-xs px-2 py-1 rounded-full">{pendingCount} pending</span>
-          )}
-        </div>
-        <AdminLogoutButton />
-      </nav>
+    <div className="min-h-screen">
+      <AdminNav
+        current={pendingCount > 0 ? `orders · ${pendingCount} open` : "orders"}
+        links={[
+          { href: "/admin/inventory", label: "Inventory" },
+          { href: "/admin", label: "Dashboard" },
+        ]}
+      />
 
       {/* Reconcile modal */}
       {actions.reconcileId && actions.activeOrder && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl p-6 max-w-md w-full border-2 border-pink-mid shadow-xl">
+          <div className="lab-panel p-6 max-w-md w-full shadow-xl">
             <h2 className="text-xl font-bold text-chocolate mb-1">Reconcile Order</h2>
             <p className="text-sm text-caramel mb-4">
               Set what <strong>{actions.activeOrder.name}</strong> actually paid for. Any reductions will be
@@ -91,8 +85,8 @@ export default function OrdersPage() {
       {/* Partial delivery modal */}
       {actions.partialId && actions.partialOrder && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl p-6 max-w-md w-full border-2 border-caramel/40 shadow-xl">
-            <h2 className="text-xl font-bold text-chocolate mb-1">📦 Record Delivery</h2>
+          <div className="lab-panel p-6 max-w-md w-full shadow-xl">
+            <h2 className="text-xl font-bold text-chocolate mb-1">Record Delivery</h2>
             <p className="text-sm text-caramel mb-4">
               How many did you deliver to <strong>{actions.partialOrder.name}</strong> today? Set each item to what you actually handed off.
             </p>
@@ -158,7 +152,7 @@ export default function OrdersPage() {
       {/* Reassign seller modal */}
       {actions.reassignId && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl p-6 max-w-sm w-full border-2 border-pink-mid shadow-xl">
+          <div className="lab-panel p-6 max-w-sm w-full shadow-xl">
             <h2 className="text-lg font-bold text-chocolate mb-1">Reassign Seller</h2>
             <p className="text-sm text-caramel mb-4">Enter the seller code this order belongs to.</p>
             <input
@@ -188,7 +182,7 @@ export default function OrdersPage() {
       {/* Price correction modal */}
       {actions.priceCorrId && (() => { const o = actions.orders.find((x) => x.id === actions.priceCorrId); if (!o) return null; return (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl p-6 max-w-md w-full border-2 border-caramel/40 shadow-xl">
+          <div className="lab-panel p-6 max-w-md w-full shadow-xl">
             <h2 className="text-lg font-bold text-chocolate mb-1">Price Correction</h2>
             <p className="text-sm text-caramel mb-4">Override line item prices. Leave blank to keep original.</p>
             <div className="space-y-3 mb-4">
@@ -260,9 +254,9 @@ export default function OrdersPage() {
         </div>
       )}
 
-      <main className="max-w-3xl mx-auto px-4 py-8">
+      <main className="max-w-3xl mx-auto px-4 sm:px-6 py-8">
         {actions.error && (
-          <div role="alert" className="bg-white rounded-xl p-4 border-2 border-pink-bold/30 text-pink-bold mb-6">
+          <div role="alert" className="lab-panel mb-6 border-hazard bg-hazard-soft p-4 lab-mono text-sm text-hazard">
             {actions.error}
           </div>
         )}
@@ -272,19 +266,15 @@ export default function OrdersPage() {
             <button
               key={f}
               onClick={() => setFilter(f as typeof filter)}
-              className={`px-4 py-2 rounded-full font-semibold text-sm transition-colors ${
-                filter === f
-                  ? "bg-pink-bold text-white"
-                  : "bg-white text-caramel border-2 border-pink-light hover:border-pink-mid"
-              }`}
+              className={`lab-btn ${filter === f ? "lab-btn-primary" : "lab-btn-ghost"} !py-1.5`}
             >
-              {f === "partial" ? "Partially Delivered" : f.charAt(0).toUpperCase() + f.slice(1)}
+              {f === "partial" ? "Partial" : f.charAt(0).toUpperCase() + f.slice(1)}
             </button>
           ))}
         </div>
 
         {filtered.length === 0 ? (
-          <p className="text-caramel text-center py-12">No orders to show</p>
+          <p className="lab-label text-center py-12">No orders to show</p>
         ) : (
           <div className="space-y-4">
             {[...filtered].reverse().map((order) => (
@@ -304,20 +294,21 @@ function OrderCard({ order, actions: a }: { order: Order; actions: ReturnType<ty
 
   return (
     <div
-      className={`bg-white rounded-xl p-5 border-2 ${
+      className={`lab-panel p-5 ${
         order.voided
-          ? "border-caramel/20 opacity-60"
+          ? "opacity-60"
           : order.status === "pending"
-          ? "border-pink-mid"
-          : "border-mint-bold/40"
+          ? "!border-line-strong"
+          : ""
       }`}
     >
       <div className="flex items-start justify-between mb-3 gap-4">
         <div>
-          <h3 className="font-bold text-chocolate text-lg">{order.name}</h3>
-          <p className="text-sm text-caramel break-all">{order.email}</p>
-          <p className="text-xs text-caramel mt-1">{getFulfillmentSummary(order.fulfillment)}</p>
-          <p className="text-xs text-caramel/60 mt-1">{new Date(order.date).toLocaleString()}</p>
+          <p className="lab-label mb-0.5">{order.status}</p>
+          <h3 className="font-bold text-ink text-lg">{order.name}</h3>
+          <p className="lab-mono text-sm text-muted break-all">{order.email}</p>
+          <p className="text-xs text-muted mt-1">{getFulfillmentSummary(order.fulfillment)}</p>
+          <p className="lab-mono text-xs text-faint mt-1">{new Date(order.date).toLocaleString()}</p>
         </div>
         <div className="flex flex-col gap-2 items-end shrink-0">
           {order.status !== "complete" && (
@@ -326,7 +317,7 @@ function OrderCard({ order, actions: a }: { order: Order; actions: ReturnType<ty
               disabled={a.saving}
               className="px-3 py-1 rounded-full text-sm font-semibold bg-caramel/20 text-chocolate hover:bg-caramel/40 transition-colors border border-caramel/30 disabled:opacity-60"
             >
-              📦 Deliver
+              Deliver
             </button>
           )}
           {order.status === "pending" && (
@@ -354,14 +345,14 @@ function OrderCard({ order, actions: a }: { order: Order; actions: ReturnType<ty
                 disabled={a.saving}
                 className="px-3 py-1 rounded-full text-sm font-semibold text-caramel hover:text-white hover:bg-caramel transition-colors border border-caramel/30 disabled:opacity-60"
               >
-                ✏️ Seller
+                Seller
               </button>
               <button
                 onClick={() => { a.setPriceCorrId(order.id); a.setPriceCorrItems({}); a.setPriceCorrNote(""); }}
                 disabled={a.saving}
                 className="px-3 py-1 rounded-full text-sm font-semibold text-caramel hover:text-white hover:bg-caramel transition-colors border border-caramel/30 disabled:opacity-60"
               >
-                💲 Price
+                Price
               </button>
               <button
                 onClick={() => void a.ownerPatch({ op: order.voided ? "unvoid" : "void", id: order.id })}
@@ -374,7 +365,7 @@ function OrderCard({ order, actions: a }: { order: Order; actions: ReturnType<ty
                 onClick={() => void a.openAudit(order.id)}
                 className="px-3 py-1 rounded-full text-sm font-semibold text-caramel/60 hover:text-chocolate transition-colors border border-caramel/20"
               >
-                🕵️ Log
+                Log
               </button>
             </>
           )}
@@ -389,7 +380,7 @@ function OrderCard({ order, actions: a }: { order: Order; actions: ReturnType<ty
       </div>
       {order.voided && (
         <div className="mb-2 text-xs font-bold text-caramel/60 bg-caramel/10 px-2 py-1 rounded-lg inline-block">
-          ⚠️ Voided — excluded from stats
+          Voided — excluded from stats
         </div>
       )}
       {a.isOwner && order.seller && (
@@ -399,7 +390,7 @@ function OrderCard({ order, actions: a }: { order: Order; actions: ReturnType<ty
       )}
       {order.status === "partial" && (
         <div className="mb-2 text-xs font-bold text-caramel bg-peach px-2 py-1 rounded-lg inline-block">
-          🕐 Partially delivered — still owed items below
+          Partially delivered — still owed items below
         </div>
       )}
       <div className="space-y-1">
@@ -428,9 +419,9 @@ function OrderCard({ order, actions: a }: { order: Order; actions: ReturnType<ty
           </div>
         )}
       </div>
-      <div className="border-t border-pink-light mt-3 pt-2 flex justify-between font-bold">
-        <span className="text-chocolate">Total</span>
-        <span className="text-pink-bold">${orderTotal.toFixed(2)}</span>
+      <div className="border-t border-line mt-3 pt-2 flex justify-between items-baseline">
+        <span className="lab-label">Total</span>
+        <span className="lab-mono text-lg font-bold text-ink">${orderTotal.toFixed(2)}</span>
       </div>
     </div>
   );

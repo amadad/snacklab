@@ -20,15 +20,15 @@ export default function Tooltip({ text }: { text: string }) {
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="w-4 h-4 rounded-full bg-pink-light text-caramel text-[10px] font-bold flex items-center justify-center hover:bg-caramel hover:text-white transition-colors ml-1.5"
+        className="ml-1.5 grid h-4 w-4 place-items-center rounded-full border border-line-strong bg-paper text-[10px] font-bold text-muted transition-colors hover:bg-ink hover:text-paper"
         aria-label="More info"
       >
         ?
       </button>
       {open && (
-        <div className="absolute z-50 bottom-full left-1/2 -translate-x-1/2 mb-2 w-56 bg-chocolate text-white text-xs rounded-lg px-3 py-2 shadow-lg leading-relaxed">
+        <div className="lab-mono absolute bottom-full left-1/2 z-50 mb-2 w-56 -translate-x-1/2 rounded-[2px] border border-ink bg-ink px-3 py-2 text-xs leading-relaxed text-paper shadow-lg">
           {text}
-          <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-chocolate" />
+          <div className="absolute left-1/2 top-full -translate-x-1/2 border-4 border-transparent border-t-ink" />
         </div>
       )}
     </div>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 
 export default function AdminLogin() {
@@ -38,22 +39,29 @@ export default function AdminLogin() {
   }
 
   return (
-    <div className="min-h-screen bg-peach/30 flex items-center justify-center px-4">
-      <form
-        onSubmit={handleLogin}
-        className="bg-white rounded-2xl p-8 border-2 border-pink-light shadow-md w-full max-w-sm space-y-4"
-      >
-        <h1 className="text-2xl font-bold text-chocolate text-center">🍫 Snack Lab</h1>
-        <p className="text-sm text-caramel text-center">Seller sign-in</p>
+    <div className="min-h-screen flex items-center justify-center px-4">
+      <form onSubmit={handleLogin} className="lab-panel w-full max-w-sm space-y-5 p-7">
+        <div className="text-center">
+          <Image
+            src="/logo.png"
+            alt="Snack Lab"
+            width={200}
+            height={196}
+            priority
+            className="mx-auto h-16 w-auto"
+          />
+          <p className="lab-label mt-3">Staff access · restricted</p>
+        </div>
 
-        <div className="space-y-2">
-          <label className="text-xs font-semibold text-chocolate uppercase tracking-wide">Your code</label>
+        <div className="space-y-1.5">
+          <label htmlFor="login-seller" className="lab-label block">Your code</label>
           <input
+            id="login-seller"
             type="text"
             value={seller}
             onChange={(e) => setSeller(e.target.value.toUpperCase())}
             placeholder="e.g. ZAIN"
-            className="w-full border-2 border-pink-light rounded-lg px-3 py-2 focus:border-pink-bold focus:outline-none focus:ring-2 focus:ring-pink-bold/30 uppercase font-mono tracking-widest"
+            className="lab-field lab-mono uppercase tracking-[0.2em]"
             autoFocus
             autoComplete="off"
             disabled={loading}
@@ -61,26 +69,31 @@ export default function AdminLogin() {
           />
         </div>
 
-        <div className="space-y-2">
-          <label className="text-xs font-semibold text-chocolate uppercase tracking-wide">Store password</label>
+        <div className="space-y-1.5">
+          <label htmlFor="login-password" className="lab-label block">Store password</label>
           <input
+            id="login-password"
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             placeholder="Password"
-            className="w-full border-2 border-pink-light rounded-lg px-3 py-2 focus:border-pink-bold focus:outline-none focus:ring-2 focus:ring-pink-bold/30"
+            className="lab-field"
             disabled={loading}
           />
         </div>
 
-        {error && <p className="text-pink-bold text-sm text-center">{error}</p>}
+        {error && (
+          <p role="alert" className="lab-mono text-center text-sm text-hazard">
+            {error}
+          </p>
+        )}
 
         <button
           type="submit"
           disabled={loading || !seller.trim() || !password.trim()}
-          className="w-full bg-pink-bold text-white py-2 rounded-full font-semibold hover:bg-pink-mid transition-colors disabled:opacity-60"
+          className="lab-btn lab-btn-primary w-full"
         >
-          {loading ? "Signing In..." : "Enter"}
+          {loading ? "Signing in…" : "Enter lab"}
         </button>
       </form>
     </div>

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import AdminLogoutButton from "@/components/AdminLogoutButton";
+import AdminNav from "@/components/AdminNav";
 import Tooltip from "@/components/Tooltip";
 import { calculateAdminMetrics } from "@/lib/adminMetrics";
 import { getFulfillmentSummary } from "@/lib/fulfillment";
@@ -63,76 +63,79 @@ export default function AdminPage() {
   const totalStolenCost = metrics.stolenCostValue;
 
   return (
-    <div className="min-h-screen bg-peach/30">
-      <nav className="bg-chocolate text-white px-6 py-3 flex items-center justify-between gap-4">
-        <span className="text-xl font-bold">
-          {isOwner ? "🍫 Owner Panel" : `🍫 ${mySeller ?? "Seller"} Dashboard`}
-        </span>
-        <div className="flex items-center gap-4">
-          <Link href="/" className="text-pink-light hover:text-white transition-colors text-sm">
-            View Store
-          </Link>
-          <AdminLogoutButton />
-        </div>
-      </nav>
+    <div className="min-h-screen">
+      <AdminNav
+        current={isOwner ? "owner panel" : `${mySeller ?? "seller"} dashboard`}
+        links={[
+          { href: "/admin/inventory", label: "Inventory" },
+          { href: "/admin/orders", label: "Orders" },
+          { href: "/", label: "Store" },
+        ]}
+      />
 
-      <main className="max-w-3xl mx-auto px-4 py-8">
-        <h1 className="text-3xl font-bold text-chocolate mb-2">
-          {isOwner ? "Dashboard" : `Your Dashboard`}
-        </h1>
-        {!isOwner && (
-          <p className="text-sm text-caramel mb-6">
-            Platform fee: <strong>{platformFeePct}%</strong> of your revenue goes to the store.
-          </p>
-        )}
+      <main className="max-w-3xl mx-auto px-4 sm:px-6 py-8">
+        <header className="mb-6">
+          <p className="lab-label mb-1">{isOwner ? "All sellers · live" : "Your numbers · live"}</p>
+          <h1 className="lab-mono text-3xl font-bold uppercase tracking-[0.06em] text-ink">
+            {isOwner ? "Dashboard" : "Dashboard"}
+          </h1>
+          {!isOwner && (
+            <p className="mt-2 text-sm text-muted">
+              Platform fee: <strong className="text-ink">{platformFeePct}%</strong> of your revenue
+              goes to the store.
+            </p>
+          )}
+        </header>
 
         {error && (
-          <div className="bg-white rounded-xl p-4 border-2 border-pink-bold/30 text-pink-bold mb-6">{error}</div>
+          <div className="lab-panel mb-6 border-hazard bg-hazard-soft p-4 lab-mono text-sm text-hazard">
+            {error}
+          </div>
         )}
 
-        <section className="bg-white rounded-2xl p-5 border-2 border-mint-bold/30 mb-6">
-          <div className="flex items-center gap-2 mb-3">
-            <h2 className="font-bold text-chocolate">Business Math Lab</h2>
+        <section className="lab-panel mb-6 p-5">
+          <div className="mb-3 flex items-center">
+            <h2 className="lab-label text-ink">Business Math Lab</h2>
             <Tooltip text="These cards explain the money story in kid-friendly words: what came in, what snacks cost, and what is left." />
           </div>
-          <div className="grid sm:grid-cols-2 gap-3">
+          <div className="grid gap-3 sm:grid-cols-2">
             {metrics.lessons.map((lesson) => (
-              <div key={lesson.label} className="rounded-xl bg-peach/40 p-3 border border-pink-light">
-                <div className="flex justify-between gap-3 items-baseline">
-                  <span className="font-bold text-chocolate">{lesson.label}</span>
-                  <span className="font-black text-mint-bold">${lesson.value.toFixed(2)}</span>
+              <div key={lesson.label} className="rounded-[2px] border border-line bg-paper p-3">
+                <div className="flex items-baseline justify-between gap-3">
+                  <span className="lab-label text-ink">{lesson.label}</span>
+                  <span className="lab-mono text-lg font-bold text-ink">${lesson.value.toFixed(2)}</span>
                 </div>
-                <p className="text-xs text-caramel mt-1">{lesson.kidExplanation}</p>
+                <p className="mt-1 text-xs text-muted">{lesson.kidExplanation}</p>
               </div>
             ))}
           </div>
         </section>
 
         {/* Stats */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-          <div className="bg-white rounded-xl p-4 border-2 border-pink-light text-center">
-            <div className="text-3xl font-bold text-pink-bold">{myProducts.length}</div>
-            <div className="text-xs text-caramel mt-1">{isOwner ? "Products" : "Your Products"}</div>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-8">
+          <div className="lab-panel p-4">
+            <div className="lab-mono text-3xl font-bold text-ink">{myProducts.length}</div>
+            <div className="lab-label mt-1">{isOwner ? "Products" : "Your Products"}</div>
           </div>
-          <div className="bg-white rounded-xl p-4 border-2 border-pink-light text-center">
-            <div className="text-3xl font-bold text-mint-bold">{myOrders.filter((o) => o.status === "pending").length}</div>
-            <div className="text-xs text-caramel mt-1">Pending</div>
+          <div className="lab-panel p-4">
+            <div className="lab-mono text-3xl font-bold text-ink">{myOrders.filter((o) => o.status === "pending").length}</div>
+            <div className="lab-label mt-1">Pending</div>
           </div>
-          <div className="bg-white rounded-xl p-4 border-2 border-pink-light text-center">
-            <div className="text-3xl font-bold text-chocolate">{myOrders.length}</div>
-            <div className="text-xs text-caramel mt-1">Total Orders</div>
+          <div className="lab-panel p-4">
+            <div className="lab-mono text-3xl font-bold text-ink">{myOrders.length}</div>
+            <div className="lab-label mt-1">Total Orders</div>
           </div>
-          <div className={`bg-white rounded-xl p-4 border-2 text-center ${(isOwner ? totalProfit : netEarnings) >= 0 ? "border-mint-bold/50" : "border-pink-bold/50"}`}>
-            <div className={`text-3xl font-bold ${(isOwner ? totalProfit : netEarnings) >= 0 ? "text-mint-bold" : "text-pink-bold"}`}>
+          <div className={`lab-panel p-4 ${(isOwner ? totalProfit : netEarnings) >= 0 ? "!border-ink" : "!border-hazard"}`}>
+            <div className={`lab-mono text-3xl font-bold ${(isOwner ? totalProfit : netEarnings) >= 0 ? "text-ink" : "text-hazard"}`}>
               ${(isOwner ? totalProfit : netEarnings).toFixed(2)}
             </div>
-            <div className="text-xs text-caramel mt-1">{isOwner ? "Profit" : "You Keep"}</div>
+            <div className="lab-label mt-1">{isOwner ? "Profit" : "You Keep"}</div>
           </div>
         </div>
 
         {/* Seller breakdown (owner) */}
         {isOwner && sellerRows.length > 0 && (
-          <div className="bg-white rounded-xl p-5 border-2 border-pink-light mb-6">
+          <div className="lab-panel p-5 mb-6">
             <div className="flex justify-between items-center mb-3">
               <h2 className="font-bold text-chocolate">Seller Breakdown</h2>
               {platformEarnings > 0 && (
@@ -155,7 +158,7 @@ export default function AdminPage() {
 
         {/* Seller fee summary (seller) — money flow visual */}
         {!isOwner && completedOrders.length > 0 && (
-          <div className="bg-white rounded-xl p-5 border-2 border-pink-light mb-6">
+          <div className="lab-panel p-5 mb-6">
             <div className="flex items-center mb-4">
               <h2 className="font-bold text-chocolate">Where your money goes</h2>
               <Tooltip text="Every dollar you earn gets split three ways: what you paid for the item (cost), the store's cut (platform fee), and what's left for you. Bigger green = more profit." />
@@ -215,7 +218,7 @@ export default function AdminPage() {
 
         {/* Owner profit breakdown — margin visual */}
         {isOwner && completedOrders.length > 0 && (
-          <div className="bg-white rounded-xl p-5 border-2 border-pink-light mb-6">
+          <div className="lab-panel p-5 mb-6">
             <div className="flex items-center mb-4">
               <h2 className="font-bold text-chocolate">Store Totals</h2>
               <Tooltip text="Margin is what you keep after paying for inventory. 30%+ is healthy for a snack store. If margin is low, your costs are eating into profit — consider raising prices or lowering what you pay for stock." />
@@ -232,10 +235,10 @@ export default function AdminPage() {
                   {/* Donut */}
                   <div className="relative w-28 h-28 shrink-0">
                     <svg viewBox="0 0 100 100" className="w-full h-full -rotate-90">
-                      <circle cx="50" cy="50" r={r} fill="none" stroke="#fce7e7" strokeWidth="14" />
+                      <circle cx="50" cy="50" r={r} fill="none" stroke="#e6e9e0" strokeWidth="14" />
                       <circle
                         cx="50" cy="50" r={r} fill="none"
-                        stroke={profitPct >= 0 ? "#34d399" : "#f87171"}
+                        stroke={profitPct >= 0 ? "#2f8f4f" : "#e0532f"}
                         strokeWidth="14"
                         strokeDasharray={`${profitDash} ${circ}`}
                         strokeLinecap="round"
@@ -272,8 +275,8 @@ export default function AdminPage() {
         )}
 
         {/* Sales chart */}
-        <div className="bg-white rounded-xl p-5 border-2 border-pink-light mb-6">
-          <h2 className="font-bold text-chocolate mb-4">
+        <div className="lab-panel p-5 mb-6">
+          <h2 className="lab-label text-ink mb-4">
             {isOwner ? "Completed Sales" : "Your Sales"} — Last 7 Days
           </h2>
           <div className="flex items-end gap-2 h-28">
@@ -299,8 +302,8 @@ export default function AdminPage() {
 
         {/* Top sellers */}
         {topSellers.length > 0 && (
-          <div className="bg-white rounded-xl p-5 border-2 border-pink-light mb-6">
-            <h2 className="font-bold text-chocolate mb-4">Top Products</h2>
+          <div className="lab-panel p-5 mb-6">
+            <h2 className="lab-label text-ink mb-4">Top Products</h2>
             <div className="space-y-3">
               {topSellers.map((s) => (
                 <div key={s.name}>
@@ -346,7 +349,7 @@ export default function AdminPage() {
 
         {/* Inventory health */}
         {myProducts.length > 0 && (
-          <div className="bg-white rounded-xl p-5 border-2 border-pink-light mb-6">
+          <div className="lab-panel p-5 mb-6">
             <div className="flex items-center mb-1">
               <h2 className="font-bold text-chocolate">Inventory Health</h2>
               <Tooltip text="Shows how much stock you have left for each item. Green = plenty, orange = running low (restock soon), red = sold out. Items are sorted worst-first so you spot problems fast." />
@@ -355,9 +358,9 @@ export default function AdminPage() {
             <div className="space-y-3">
               {(() => { const max = Math.max(...myProducts.map((x) => x.quantity), 1); return [...myProducts].sort((a, b) => a.quantity - b.quantity).slice(0, 8).map((p) => {
                 const pct = Math.round((p.quantity / max) * 100);
-                const color = p.quantity === 0 ? "bg-pink-bold" : p.quantity <= 2 ? "bg-caramel" : "bg-mint-bold";
+                const color = p.quantity === 0 ? "bg-hazard" : p.quantity <= 2 ? "bg-caramel" : "bg-mint-bold";
                 const label = p.quantity === 0 ? "Sold out" : p.quantity <= 2 ? "Low" : "OK";
-                const labelColor = p.quantity === 0 ? "text-pink-bold" : p.quantity <= 2 ? "text-caramel" : "text-mint-bold";
+                const labelColor = p.quantity === 0 ? "text-hazard" : p.quantity <= 2 ? "text-caramel" : "text-mint-bold";
                 return (
                   <div key={p.id}>
                     <div className="flex justify-between text-xs mb-1">
@@ -376,8 +379,8 @@ export default function AdminPage() {
 
         {/* Recent orders */}
         {recentOrders.length > 0 && (
-          <div className="bg-white rounded-xl p-5 border-2 border-pink-light mb-6">
-            <h2 className="font-bold text-chocolate mb-3">{isOwner ? "Recent Orders" : "Your Recent Orders"}</h2>
+          <div className="lab-panel p-5 mb-6">
+            <h2 className="lab-label text-ink mb-3">{isOwner ? "Recent Orders" : "Your Recent Orders"}</h2>
             <div className="space-y-2">
               {recentOrders.map((o) => {
                 const total = o.items.reduce((s, i) => s + i.price * i.quantity, 0) + (o.fulfillmentFee ?? 0);
@@ -408,8 +411,8 @@ export default function AdminPage() {
 
         {/* Item requests (owner only) */}
         {isOwner && recentRequests.length > 0 && (
-          <div className="bg-white rounded-xl p-5 border-2 border-pink-light mb-8">
-            <h2 className="font-bold text-chocolate mb-3">Recent Item Requests</h2>
+          <div className="lab-panel p-5 mb-8">
+            <h2 className="lab-label text-ink mb-3">Recent Item Requests</h2>
             <div className="space-y-3">
               {recentRequests.map((request) => (
                 <div key={request.id} className="border-b border-pink-light/40 pb-3 last:border-0 last:pb-0">
@@ -427,18 +430,12 @@ export default function AdminPage() {
           </div>
         )}
 
-        <div className="grid grid-cols-2 gap-4">
-          <Link
-            href="/admin/inventory"
-            className="bg-pink-bold text-white rounded-xl p-8 text-center font-bold text-xl hover:bg-pink-mid transition-colors"
-          >
-            {isOwner ? "All Inventory" : "My Inventory"}
+        <div className="grid grid-cols-2 gap-3">
+          <Link href="/admin/inventory" className="lab-btn lab-btn-primary !py-8 !text-base">
+            {isOwner ? "All Inventory →" : "My Inventory →"}
           </Link>
-          <Link
-            href="/admin/orders"
-            className="bg-mint-bold text-white rounded-xl p-8 text-center font-bold text-xl hover:bg-mint-bold/80 transition-colors"
-          >
-            {isOwner ? "All Orders" : "My Orders"}
+          <Link href="/admin/orders" className="lab-btn lab-btn-ghost !py-8 !text-base">
+            {isOwner ? "All Orders →" : "My Orders →"}
           </Link>
         </div>
       </main>

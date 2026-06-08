@@ -2,8 +2,7 @@
 
 import { useState } from "react";
 import Image from "next/image";
-import Link from "next/link";
-import AdminLogoutButton from "@/components/AdminLogoutButton";
+import AdminNav from "@/components/AdminNav";
 import type { Product } from "@/lib/types";
 import { useAdminData } from "@/hooks/useAdminData";
 
@@ -32,14 +31,11 @@ type RestockSummary = {
 };
 
 // Shared class tokens — keep styling consistent and the JSX readable.
-const inputClass =
-  "w-full border border-pink-light rounded-lg px-3 py-2 bg-white focus:border-pink-bold focus:outline-none focus:ring-2 focus:ring-pink-bold/30";
-const labelClass = "block text-xs font-semibold uppercase tracking-wide text-caramel/80 mb-1";
-const cardClass = "bg-white rounded-xl border border-pink-light";
-const chipBase =
-  "text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full border";
-const chipAttention = `${chipBase} bg-pink-light/60 text-pink-bold border-pink-mid/40`;
-const chipNeutral = `${chipBase} bg-peach text-caramel border-caramel/25`;
+const inputClass = "lab-field";
+const labelClass = "lab-label mb-1 block";
+const cardClass = "lab-panel";
+const chipAttention = "lab-tag lab-tag-hazard";
+const chipNeutral = "lab-tag";
 
 export default function InventoryPage() {
   const admin = useAdminData({ products: true });
@@ -216,26 +212,24 @@ export default function InventoryPage() {
       : null;
 
   return (
-    <div className="min-h-screen bg-peach/30">
-      <nav className="bg-chocolate text-white px-6 py-3 flex items-center justify-between gap-4">
-        <div className="flex items-center gap-4">
-          <Link href="/admin" className="text-pink-light hover:text-white transition-colors">
-            ← Back
-          </Link>
-          <span className="text-xl font-bold">Inventory</span>
-        </div>
-        <AdminLogoutButton />
-      </nav>
+    <div className="min-h-screen">
+      <AdminNav
+        current="inventory"
+        links={[
+          { href: "/admin/orders", label: "Orders" },
+          { href: "/admin", label: "Dashboard" },
+        ]}
+      />
 
       {/* Restock modal */}
       {restockId && restockProduct && (
-        <div className="fixed inset-0 bg-chocolate/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl p-6 max-w-md w-full border border-pink-light shadow-2xl">
+        <div className="fixed inset-0 bg-ink/50 z-50 flex items-center justify-center p-4">
+          <div className="lab-panel p-6 max-w-md w-full shadow-2xl">
             {restockSummary ? (
-              <div className="animate-bounce-in">
+              <div className="animate-fade-in-up">
                 <div className="flex items-center gap-2 mb-1">
-                  <span className="text-mint-bold text-xl">✓</span>
-                  <h2 className="text-xl font-bold text-chocolate">Restocked</h2>
+                  <span className="text-positive text-xl">✓</span>
+                  <h2 className="lab-mono text-lg font-bold uppercase tracking-[0.06em] text-ink">Restocked</h2>
                 </div>
                 <p className="text-sm text-caramel mb-5">
                   Added <strong className="text-chocolate">{restockSummary.quantityAdded}</strong> of{" "}
@@ -276,16 +270,13 @@ export default function InventoryPage() {
                   the number you&apos;ll use to figure out profit on the next sale.
                 </p>
 
-                <button
-                  onClick={closeRestock}
-                  className="w-full bg-mint-bold text-white py-2.5 rounded-full font-bold hover:bg-mint-bold/90 active:scale-[0.98] transition-all"
-                >
+                <button onClick={closeRestock} className="lab-btn lab-btn-primary w-full">
                   Done
                 </button>
               </div>
             ) : (
               <>
-                <h2 className="text-xl font-bold text-chocolate mb-1">Restock</h2>
+                <h2 className="lab-mono text-lg font-bold uppercase tracking-[0.06em] text-ink mb-1">Restock</h2>
                 <p className="text-sm text-caramel mb-5">
                   <strong className="text-chocolate">{restockProduct.name}</strong> —{" "}
                   <span className="tabular-nums">{restockProduct.quantity}</span> in stock at{" "}
@@ -335,13 +326,13 @@ export default function InventoryPage() {
                   <button
                     onClick={submitRestock}
                     disabled={restocking || !restockQty || !restockCost}
-                    className="flex-1 bg-mint-bold text-white py-2.5 rounded-full font-bold hover:bg-mint-bold/90 active:scale-[0.98] transition-all disabled:opacity-50 disabled:active:scale-100"
+                    className="lab-btn lab-btn-primary flex-1"
                   >
-                    {restocking ? "Saving..." : "Add to Inventory"}
+                    {restocking ? "Saving…" : "Add to inventory"}
                   </button>
                   <button
                     onClick={closeRestock}
-                    className="px-4 text-caramel hover:text-chocolate transition-colors"
+                    className="lab-btn lab-btn-ghost"
                   >
                     Cancel
                   </button>
@@ -356,7 +347,7 @@ export default function InventoryPage() {
         {error && (
           <div
             role="alert"
-            className="bg-white rounded-xl p-4 border border-pink-bold/30 text-pink-bold"
+            className="lab-panel border-hazard bg-hazard-soft p-4 lab-mono text-sm text-hazard"
           >
             {error}
           </div>
@@ -365,14 +356,14 @@ export default function InventoryPage() {
         {/* Add / Edit form */}
         <form onSubmit={handleSubmit} className={`${cardClass} p-6 space-y-5`}>
           <div className="flex items-center justify-between gap-4">
-            <h2 className="text-xl font-bold text-chocolate">
-              {editId ? "Edit Item" : "Add New Item"}
+            <h2 className="lab-mono text-lg font-bold uppercase tracking-[0.06em] text-ink">
+              {editId ? "Edit specimen" : "New specimen"}
             </h2>
             {editId && (
               <button
                 type="button"
                 onClick={() => handleDelete(editId)}
-                className="text-xs font-semibold text-caramel hover:text-pink-bold transition-colors"
+                className="lab-label hover:text-hazard transition-colors"
               >
                 Delete this item
               </button>
@@ -463,19 +454,19 @@ export default function InventoryPage() {
                     className="h-16 w-16 rounded-lg object-cover border border-pink-light"
                   />
                 ) : (
-                  <div className="h-16 w-16 rounded-lg bg-peach border border-pink-light flex items-center justify-center text-2xl">
-                    🍡
+                  <div className="grid h-16 w-16 place-items-center rounded-[2px] border border-line bg-paper">
+                    <span className="lab-label text-faint">—</span>
                   </div>
                 )}
-                <label className="flex-1 text-xs text-caramel cursor-pointer hover:text-chocolate transition-colors">
+                <label className="flex-1 cursor-pointer">
                   <input
                     type="file"
                     accept="image/*"
                     onChange={handleUpload}
                     className="hidden"
                   />
-                  <span className="inline-block px-3 py-2 rounded-lg border border-pink-light bg-white hover:bg-peach/60 transition-colors font-semibold">
-                    {uploading ? "Uploading..." : form.image ? "Change photo" : "Take / choose photo"}
+                  <span className="lab-btn lab-btn-ghost !py-2">
+                    {uploading ? "Uploading…" : form.image ? "Change photo" : "Choose photo"}
                   </span>
                 </label>
               </div>
@@ -485,25 +476,25 @@ export default function InventoryPage() {
               <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
                 <FlagCheckbox
                   id="hot-flag"
-                  label="🔥 Hot"
+                  label="Hot"
                   checked={form.hot ?? false}
                   onChange={(v) => setForm((f) => ({ ...f, hot: v }))}
                 />
                 <FlagCheckbox
                   id="coming-soon-flag"
-                  label="🔜 Coming soon"
+                  label="Coming soon"
                   checked={form.comingSoon ?? false}
                   onChange={(v) => setForm((f) => ({ ...f, comingSoon: v }))}
                 />
                 <FlagCheckbox
                   id="missing-flag"
-                  label="❓ Missing"
+                  label="Missing"
                   checked={form.missing ?? false}
                   onChange={(v) => setForm((f) => ({ ...f, missing: v }))}
                 />
                 <FlagCheckbox
                   id="stolen-flag"
-                  label="🚨 Stolen"
+                  label="Stolen"
                   checked={form.stolen ?? false}
                   onChange={(v) => setForm((f) => ({ ...f, stolen: v }))}
                 />
@@ -539,9 +530,9 @@ export default function InventoryPage() {
             <button
               type="submit"
               disabled={saving || uploading}
-              className="bg-pink-bold text-white px-6 py-2.5 rounded-full font-bold hover:bg-pink-mid active:scale-[0.98] transition-all disabled:opacity-50 disabled:active:scale-100"
+              className="lab-btn lab-btn-primary px-6"
             >
-              {saving ? "Saving..." : editId ? "Save Changes" : "Add Item"}
+              {saving ? "Saving…" : editId ? "Save changes" : "Add specimen"}
             </button>
             {editId && (
               <button
@@ -551,7 +542,7 @@ export default function InventoryPage() {
                   setForm(empty);
                   setError(null);
                 }}
-                className="text-caramel hover:text-chocolate transition-colors px-4"
+                className="lab-btn lab-btn-ghost"
               >
                 Cancel
               </button>
@@ -561,14 +552,12 @@ export default function InventoryPage() {
 
         {/* List */}
         <section>
-          <h2 className="text-xl font-bold text-chocolate mb-4">
-            {isOwner ? "All Inventory" : "Your Inventory"}
-            <span className="ml-2 text-sm font-semibold text-caramel tabular-nums">
-              ({products.length})
-            </span>
+          <h2 className="lab-mono text-lg font-bold uppercase tracking-[0.06em] text-ink mb-4">
+            {isOwner ? "All inventory" : "Your inventory"}
+            <span className="lab-label ml-2">[{products.length}]</span>
           </h2>
           {products.length === 0 ? (
-            <p className="text-caramel">No products yet. Add one above!</p>
+            <p className="lab-label">No specimens yet. Add one above.</p>
           ) : (
             <div className="space-y-3">
               {products.map((p) => (
@@ -630,8 +619,8 @@ function ProductRow({
 
   return (
     <div
-      className={`bg-white rounded-xl border p-4 flex gap-4 transition-colors ${
-        isEditing ? "border-pink-bold/40 ring-2 ring-pink-bold/20" : "border-pink-light"
+      className={`lab-panel p-4 flex gap-4 transition-colors ${
+        isEditing ? "!border-ink ring-2 ring-reagent" : ""
       }`}
     >
       {p.image ? (
@@ -641,19 +630,19 @@ function ProductRow({
           width={64}
           height={64}
           unoptimized
-          className="w-16 h-16 rounded-lg object-cover shrink-0 border border-pink-light"
+          className="w-16 h-16 rounded-[2px] object-cover shrink-0 border border-line"
         />
       ) : (
-        <div className="w-16 h-16 rounded-lg bg-peach flex items-center justify-center text-2xl shrink-0 border border-pink-light">
-          🍡
+        <div className="grid w-16 h-16 place-items-center rounded-[2px] bg-paper shrink-0 border border-line">
+          <span className="lab-label text-faint">—</span>
         </div>
       )}
 
       <div className="flex-1 min-w-0 flex flex-col gap-3">
         <div>
-          <h3 className="font-bold text-chocolate flex items-center gap-1.5 flex-wrap leading-tight">
+          <h3 className="font-bold text-ink flex items-center gap-1.5 flex-wrap leading-tight">
             <span className="truncate">{p.name}</span>
-            {p.hot && <span aria-label="Hot item">🔥</span>}
+            {p.hot && <span className="lab-tag lab-tag-accent">Hot</span>}
             {p.stolen && (
               <span className={chipAttention}>
                 Stolen{p.stolenQty ? ` · ${p.stolenQty}` : ""}
@@ -664,33 +653,25 @@ function ProductRow({
             {soldOut && <span className={chipNeutral}>Sold out</span>}
           </h3>
 
-          <p className="text-sm text-caramel mt-1 tabular-nums">
-            <span className="text-caramel/70">cost</span> ${(p.cost || 0).toFixed(2)}
-            <span className="text-caramel/40 mx-1">/</span>
-            <span className="text-caramel/70">sell</span> ${p.price.toFixed(2)}
+          <p className="lab-mono text-sm text-muted mt-1">
+            <span className="text-faint">cost</span> ${(p.cost || 0).toFixed(2)}
+            <span className="text-faint mx-1">/</span>
+            <span className="text-faint">sell</span> ${p.price.toFixed(2)}
             {p.cost > 0 && (
-              <span className="text-mint-bold font-semibold ml-1.5">
-                +${profit.toFixed(2)}
-              </span>
+              <span className="text-positive font-semibold ml-1.5">+${profit.toFixed(2)}</span>
             )}
-            <span className="text-caramel/40 mx-1.5">·</span>
-            <span className={lowStock ? "text-pink-bold font-semibold" : soldOut ? "text-pink-bold font-semibold" : ""}>
+            <span className="text-faint mx-1.5">·</span>
+            <span className={lowStock || soldOut ? "text-hazard font-semibold" : "text-ink"}>
               {p.quantity} in stock
             </span>
           </p>
         </div>
 
         <div className="flex gap-2 flex-wrap">
-          <button
-            onClick={onRestock}
-            className="px-4 py-1.5 rounded-full text-sm font-bold bg-mint-bold text-white hover:bg-mint-bold/90 active:scale-[0.97] transition-all"
-          >
+          <button onClick={onRestock} className="lab-btn lab-btn-primary !py-1.5">
             + Restock
           </button>
-          <button
-            onClick={onEdit}
-            className="px-4 py-1.5 rounded-full text-sm font-semibold bg-pink-light text-pink-bold hover:bg-pink-mid hover:text-white active:scale-[0.97] transition-all"
-          >
+          <button onClick={onEdit} className="lab-btn lab-btn-ghost !py-1.5">
             Edit
           </button>
         </div>

@@ -35,7 +35,6 @@ export default function Storefront({ initialProducts }: { initialProducts: Publi
   const soldOut = initialProducts.filter((p) => p.quantity === 0 && !p.missing && !p.stolen && !p.comingSoon);
   const unavailable = initialProducts.filter((p) => p.missing || p.stolen);
   const comingSoon = initialProducts.filter((p) => p.comingSoon);
-  const onShelf = inStock.length;
 
   // Everything a customer can't buy right now, collapsed under one section.
   const offShelf = [
@@ -99,17 +98,7 @@ export default function Storefront({ initialProducts }: { initialProducts: Publi
     <div className="min-h-screen flex flex-col">
       <Navbar />
       <main className="max-w-5xl w-full mx-auto px-4 sm:px-6 py-8 flex-1">
-        {/* Slim header strip */}
-        <div className="mb-6 flex flex-wrap items-baseline justify-between gap-2 border-b border-line pb-3">
-          <div>
-            <h1 className="sr-only">Snack Lab</h1>
-            <p className="lab-label">Student-run · pay cash on pickup</p>
-          </div>
-          <p className="lab-mono text-xs text-muted">
-            <span className="font-bold text-ink">{String(onShelf).padStart(2, "0")}</span> on shelf
-            <span className="text-faint"> · {String(initialProducts.length).padStart(2, "0")} cataloged</span>
-          </p>
-        </div>
+        <h1 className="sr-only">Snack Lab</h1>
 
         {initialProducts.length === 0 ? (
           <div className="lab-panel grid place-items-center px-6 py-20 text-center">

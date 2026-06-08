@@ -2,6 +2,9 @@
 
 All notable changes to Snacklab are documented here.
 
+## 2026-06-08
+- 🔄 Update: "Lab specimen" UI + strip public product fields (12:18 UTC, Ali Madad)
+
 ## 2026-06-03
 - 📝 Docs: record changelog update (15:30 UTC, Ali Madad)
 

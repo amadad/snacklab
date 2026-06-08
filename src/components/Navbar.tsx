@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 import { useCart } from "./CartProvider";
 
@@ -26,13 +27,8 @@ export default function Navbar() {
   return (
     <nav className="sticky top-0 z-50 border-b border-line bg-paper/85 backdrop-blur-sm">
       <div className="max-w-5xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
-        <Link href="/" className="group flex items-baseline gap-2">
-          <span className="lab-mono text-base font-bold tracking-[0.18em] text-ink uppercase">
-            Snack<span className="text-reagent-deep">·</span>Lab
-          </span>
-          <span className="lab-label hidden sm:inline group-hover:text-ink transition-colors">
-            / inventory
-          </span>
+        <Link href="/" aria-label="Snack Lab — home" className="flex items-center">
+          <Image src="/logo.png" alt="Snack Lab" width={130} height={128} priority className="h-9 w-auto" />
         </Link>
 
         <Link

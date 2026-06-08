@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import Image from "next/image";
 import Navbar from "@/components/Navbar";
 import ProductCard from "@/components/ProductCard";
 import { useCart } from "@/components/CartProvider";
@@ -29,6 +28,7 @@ export default function Storefront({ initialProducts }: { initialProducts: Publi
   const [requestError, setRequestError] = useState<string | null>(null);
   const [submittingRequest, setSubmittingRequest] = useState(false);
   const [addedIds, setAddedIds] = useState<Set<string>>(new Set());
+  const [showOffShelf, setShowOffShelf] = useState(false);
   const { addItem, items } = useCart();
 
   const inStock = initialProducts.filter((p) => p.quantity > 0 && !p.missing && !p.stolen && !p.comingSoon);
@@ -36,6 +36,13 @@ export default function Storefront({ initialProducts }: { initialProducts: Publi
   const unavailable = initialProducts.filter((p) => p.missing || p.stolen);
   const comingSoon = initialProducts.filter((p) => p.comingSoon);
   const onShelf = inStock.length;
+
+  // Everything a customer can't buy right now, collapsed under one section.
+  const offShelf = [
+    ...soldOut.map((p) => ({ p, variant: "sold-out" as const })),
+    ...unavailable.map((p) => ({ p, variant: "unavailable" as const })),
+    ...comingSoon.map((p) => ({ p, variant: "coming-soon" as const })),
+  ];
 
   function handleAdd(p: PublicProduct) {
     const inCart = items.find((i) => i.productId === p.id)?.quantity ?? 0;
@@ -92,67 +99,71 @@ export default function Storefront({ initialProducts }: { initialProducts: Publi
     <div className="min-h-screen flex flex-col">
       <Navbar />
       <main className="max-w-5xl w-full mx-auto px-4 sm:px-6 py-8 flex-1">
-        {/* Masthead */}
-        <header className="lab-panel mb-8 flex flex-col gap-5 px-5 py-5 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-center gap-4">
-            <h1 className="m-0 shrink-0">
-              <Image
-                src="/logo.png"
-                alt="Snack Lab"
-                width={320}
-                height={313}
-                priority
-                className="h-20 w-auto drop-shadow-sm sm:h-24"
-              />
-            </h1>
-            <p className="lab-label leading-relaxed">
-              Student-run
-              <br />
-              <span className="text-faint">Pay cash on pickup</span>
-            </p>
+        {/* Slim header strip */}
+        <div className="mb-6 flex flex-wrap items-baseline justify-between gap-2 border-b border-line pb-3">
+          <div>
+            <h1 className="sr-only">Snack Lab</h1>
+            <p className="lab-label">Student-run · pay cash on pickup</p>
           </div>
-          <dl className="flex gap-6">
-            <div>
-              <dt className="lab-label">On shelf</dt>
-              <dd className="lab-mono text-2xl font-bold text-ink">{String(onShelf).padStart(2, "0")}</dd>
-            </div>
-            <div>
-              <dt className="lab-label">Catalog</dt>
-              <dd className="lab-mono text-2xl font-bold text-muted">
-                {String(initialProducts.length).padStart(2, "0")}
-              </dd>
-            </div>
-          </dl>
-        </header>
+          <p className="lab-mono text-xs text-muted">
+            <span className="font-bold text-ink">{String(onShelf).padStart(2, "0")}</span> on shelf
+            <span className="text-faint"> · {String(initialProducts.length).padStart(2, "0")} cataloged</span>
+          </p>
+        </div>
 
-        {inStock.length === 0 && soldOut.length === 0 && unavailable.length === 0 && comingSoon.length === 0 ? (
+        {initialProducts.length === 0 ? (
           <div className="lab-panel grid place-items-center px-6 py-20 text-center">
             <p className="lab-label mb-2">No specimens on record</p>
             <p className="text-sm text-muted">The shelf is empty — check back soon.</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3">
-            {inStock.map((p, i) => (
-              <ProductCard
-                key={p.id}
-                product={p}
-                variant="in-stock"
-                index={i}
-                inCart={items.find((it) => it.productId === p.id)?.quantity ?? 0}
-                justAdded={addedIds.has(p.id)}
-                onAdd={handleAdd}
-              />
-            ))}
-            {soldOut.map((p) => (
-              <ProductCard key={p.id} product={p} variant="sold-out" />
-            ))}
-            {unavailable.map((p) => (
-              <ProductCard key={p.id} product={p} variant="unavailable" />
-            ))}
-            {comingSoon.map((p) => (
-              <ProductCard key={p.id} product={p} variant="coming-soon" />
-            ))}
-          </div>
+          <>
+            {inStock.length > 0 ? (
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3">
+                {inStock.map((p, i) => (
+                  <ProductCard
+                    key={p.id}
+                    product={p}
+                    variant="in-stock"
+                    index={i}
+                    inCart={items.find((it) => it.productId === p.id)?.quantity ?? 0}
+                    justAdded={addedIds.has(p.id)}
+                    onAdd={handleAdd}
+                  />
+                ))}
+              </div>
+            ) : (
+              <div className="lab-panel px-6 py-10 text-center">
+                <p className="lab-label mb-1">Nothing on the shelf right now</p>
+                <p className="text-sm text-muted">Everything&apos;s off-shelf — expand below or file a request.</p>
+              </div>
+            )}
+
+            {offShelf.length > 0 && (
+              <section className="mt-6">
+                <button
+                  type="button"
+                  onClick={() => setShowOffShelf((v) => !v)}
+                  aria-expanded={showOffShelf}
+                  aria-controls="off-shelf-grid"
+                  className="flex w-full items-center justify-between border-y border-line py-3 text-left transition-colors hover:bg-panel focus:outline-none focus-visible:ring-2 focus-visible:ring-reagent-deep"
+                >
+                  <span className="lab-label">Off shelf [{offShelf.length}]</span>
+                  <span className="lab-mono text-sm text-muted">{showOffShelf ? "[ − ]" : "[ + ]"}</span>
+                </button>
+                {showOffShelf && (
+                  <div
+                    id="off-shelf-grid"
+                    className="grid grid-cols-1 gap-4 pt-4 sm:grid-cols-2 md:grid-cols-3 animate-fade-in-up"
+                  >
+                    {offShelf.map(({ p, variant }) => (
+                      <ProductCard key={p.id} product={p} variant={variant} />
+                    ))}
+                  </div>
+                )}
+              </section>
+            )}
+          </>
         )}
 
         {/* Request bench */}

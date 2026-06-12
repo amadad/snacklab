@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
+import { STORE_CLOSED } from "@/lib/storeStatus";
 
 const MUTATION_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"]);
+
+// Paths that stay reachable while the store is closed: the closed page itself
+// and the assets it needs.
+const CLOSED_ALLOWED_PATHS = new Set(["/", "/logo.png", "/icon.png"]);
 
 function isAllowedOrigin(request: NextRequest): boolean {
   const origin = request.headers.get("origin");
@@ -14,6 +19,21 @@ function isAllowedOrigin(request: NextRequest): boolean {
 }
 
 export function middleware(request: NextRequest) {
+  // Store closed: only the countdown page exists. Every other page redirects
+  // home; all API routes (including auth/login) are shut off.
+  if (STORE_CLOSED) {
+    const { pathname } = request.nextUrl;
+    if (!CLOSED_ALLOWED_PATHS.has(pathname)) {
+      if (pathname.startsWith("/api/")) {
+        return NextResponse.json(
+          { error: "Unavailable" },
+          { status: 503 }
+        );
+      }
+      return NextResponse.redirect(new URL("/", request.url));
+    }
+  }
+
   // Block cross-origin mutations (CSRF protection)
   if (MUTATION_METHODS.has(request.method) && !isAllowedOrigin(request)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });

@@ -2,6 +2,9 @@
 
 All notable changes to Snacklab are documented here.
 
+## 2026-06-16
+- 📝 Docs: update changelog (13:24 UTC, Ali Madad)
+
 ## 2026-06-12
 - 🔄 Update: summer shutdown — replace site with logo + NumberFlow countdown to 6/26 (11:47 UTC, Ali Madad)
 

@@ -2,6 +2,9 @@
 
 All notable changes to Snacklab are documented here.
 
+## 2026-06-21
+- 📝 Docs: update CHANGELOG (19:20 UTC, Ali Madad)
+
 ## 2026-06-17
 - 📝 Docs: update changelog (01:49 UTC, Ali Madad)
 
